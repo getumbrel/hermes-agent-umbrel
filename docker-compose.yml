@@ -1,0 +1,65 @@
+services:
+  # Web terminal UI
+  web:
+    build: .
+    container_name: hermes-web
+    restart: unless-stopped
+    init: true
+    user: "1000:1000"
+    environment:
+      APP_SEED: ${APP_SEED:-dev} # Provided by umbrelOS; fallback for local dev
+    ports:
+      - "18789:18789"
+    volumes:
+      - ./data:/opt/data
+    networks:
+      - hermes-net
+    depends_on:
+      - gateway
+
+  # Hermes messaging gateway
+  gateway:
+    image: nousresearch/hermes-agent:latest
+    container_name: hermes-gateway
+    restart: unless-stopped
+    command: gateway run
+    # Port 8642 is not exposed to host — only accessible on the Docker network
+    # for dashboard health checks. No auth risk since it's internal only.
+    # HERMES_UID/GID: would ideally be 1000 to match umbrelOS, but the entrypoint
+    # only chowns /opt/data, not /opt/hermes. The dashboard's first-run npm build
+    # writes to /opt/hermes/web/ and fails with a remapped UID. Upstream issue.
+    # Gateway and dashboard run as UID 10000 (default hermes user) for now.
+    volumes:
+      - ./data:/opt/data
+    # API_SERVER_ENABLED: "true" — not needed until GATEWAY_HEALTH_URL fix is released.
+    # Add it back (along with API_SERVER_KEY for inter-container auth) when the
+    # dashboard can actually probe the gateway over HTTP.
+    networks:
+      - hermes-net
+
+  # Hermes web dashboard
+  dashboard:
+    image: nousresearch/hermes-agent:latest
+    container_name: hermes-dashboard
+    restart: unless-stopped
+    # --host 0.0.0.0 is required so the dashboard is reachable from the web container.
+    # This triggers a "Binding to 0.0.0.0" security warning in logs — safe to ignore
+    # because the port is not exposed to the host; only accessible via the Docker network.
+    # All external access goes through the web container which is behind umbrelOS auth.
+    command: dashboard --host 0.0.0.0 --no-open
+    volumes:
+      - ./data:/opt/data
+    environment:
+      # GATEWAY_HEALTH_URL was merged (45595f48, 2026-04-14) but not yet released.
+      # Until a new image includes it, the dashboard's gateway status card will
+      # show "stopped" because it falls back to local PID detection which can't
+      # see across containers. Remove this comment once the fix is released.
+      GATEWAY_HEALTH_URL: http://hermes-gateway:8642
+    networks:
+      - hermes-net
+    depends_on:
+      - gateway
+
+networks:
+  hermes-net:
+    driver: bridge

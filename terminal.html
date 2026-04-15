@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hermes</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.min.css">
+  <style>
+    /* Hermes brand colors (from hermes_cli/banner.py):
+       accent: #FFBF00 (amber/gold), title: #FFD700 (gold),
+       dim: #B8860B (dark goldenrod), border: #CD7F32 (bronze),
+       text: #FFF8DC (cornsilk) */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', Roboto, sans-serif;
+      background: #0F0F0F;
+      color: #E4E4E7;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .header {
+      flex-shrink: 0;
+      max-width: 960px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 32px 32px 0;
+    }
+
+    .header-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+    }
+
+    .header-logo {
+      flex-shrink: 0;
+      width: 64px;
+      height: 64px;
+      border-radius: 14px;
+      margin-top: 2px;
+    }
+
+    .header-text h1 {
+      font-size: 24px;
+      font-weight: 600;
+      line-height: 1.3;
+      color: #E4E4E7;
+      margin-bottom: 2px;
+    }
+
+    .header-text .subtitle {
+      font-size: 14px;
+      color: #A1A1AA;
+    }
+
+    .pro-tip {
+      background: #18181B;
+      border: 1px solid #27272A;
+      border-left: 3px solid #FFBF00;
+      border-radius: 6px;
+      padding: 12px 16px;
+      margin-top: 12px;
+      font-size: 13px;
+      color: #A1A1AA;
+      line-height: 1.6;
+    }
+
+    .pro-tip strong {
+      color: #E4E4E7;
+      font-weight: 600;
+    }
+
+    .pro-tip code {
+      color: #FFD700;
+      font-family: 'Menlo', 'Monaco', 'Cascadia Code', 'Courier New', monospace;
+      font-size: 0.95em;
+    }
+
+    .btn-dashboard {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      background: transparent;
+      border: 1px solid #3F3F46;
+      color: #A1A1AA;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      text-decoration: none;
+      transition: border-color 0.15s, color 0.15s;
+    }
+
+    .btn-dashboard:hover {
+      border-color: #FFBF00;
+      color: #FFBF00;
+    }
+
+    .btn-dashboard svg {
+      width: 16px;
+      height: 16px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .terminal-wrapper {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      max-width: 960px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 16px 32px 32px;
+      min-height: 0;
+    }
+
+    .terminal-card {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      border-radius: 10px;
+      border: 1px solid #27272A;
+      overflow: hidden;
+      max-height: 800px;
+      box-shadow: 0 0 0 1px rgba(255,191,0,0.06), 0 20px 60px rgba(0,0,0,0.5);
+    }
+
+    .titlebar {
+      flex-shrink: 0;
+      height: 36px;
+      background: #18181B;
+      border-bottom: 1px solid #27272A;
+      display: flex;
+      align-items: center;
+      padding: 0 14px;
+      gap: 8px;
+    }
+
+    .titlebar-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+
+    .titlebar-dot.close { background: #EF4444; }
+    .titlebar-dot.minimize { background: #EAB308; }
+    .titlebar-dot.maximize { background: #22C55E; }
+
+    .titlebar-label {
+      flex: 1;
+      text-align: center;
+      font-family: 'Menlo', 'Monaco', 'Cascadia Code', 'Courier New', monospace;
+      font-size: 12px;
+      font-weight: 500;
+      color: #52525B;
+      margin-right: 52px;
+    }
+
+    .terminal-info {
+      flex-shrink: 0;
+      background: #141414;
+      padding: 12px 16px 8px;
+      font-family: 'Menlo', 'Monaco', 'Cascadia Code', 'Courier New', monospace;
+      font-size: 13px;
+      line-height: 1.5;
+      border-bottom: 1px solid #2A2A2A;
+    }
+
+    .terminal-info .info-heading {
+      color: #D4D0CB;
+      font-weight: bold;
+    }
+
+    .terminal-info .info-dim {
+      color: #6B6460;
+    }
+
+    .terminal-body {
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+      background: #111113;
+    }
+
+    .terminal-body .xterm {
+      padding: 8px;
+    }
+
+    .terminal-body .xterm-viewport::-webkit-scrollbar { display: none; }
+    .terminal-body .xterm-viewport { scrollbar-width: none; }
+
+    .terminal-footer {
+      flex-shrink: 0;
+      background: #18181B;
+      border-top: 1px solid #27272A;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 14px;
+      min-height: 40px;
+    }
+
+    .footer-hints {
+      font-size: 11px;
+      color: #52525B;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .footer-hints kbd {
+      background: #27272A;
+      border: 1px solid #3F3F46;
+      border-radius: 3px;
+      padding: 1px 5px;
+      font-family: inherit;
+      font-size: 10px;
+      color: #A1A1AA;
+    }
+
+    .footer-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .footer-message {
+      font-size: 12px;
+      color: #52525B;
+    }
+
+    .footer-message.success { color: #34D399; }
+    .footer-message.error { color: #F87171; }
+
+    .btn-reconnect {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      background: transparent;
+      border: 1px solid #3F3F46;
+      color: #A1A1AA;
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+
+    .btn-reconnect:hover {
+      border-color: #FFBF00;
+      color: #FFBF00;
+    }
+
+    .mobile-note {
+      display: none;
+      max-width: 960px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 0 32px;
+      font-size: 13px;
+      color: #71717A;
+    }
+
+    @media (pointer: coarse) {
+      .mobile-note { display: block; }
+    }
+
+    @media (max-width: 600px) {
+      .header { padding: 12px 16px 0; }
+      .header-top { flex-direction: column; align-items: flex-start; gap: 10px; }
+      .header-logo { display: none; }
+      .header-text h1 { font-size: 18px; }
+      .pro-tip { display: none; }
+      .terminal-info { display: none; }
+      .terminal-wrapper { padding: 8px 16px 8px; }
+      .terminal-footer { padding: 6px 8px; min-height: 32px; }
+      .btn-reconnect { padding: 4px 10px; font-size: 11px; }
+      .footer-message { font-size: 11px; }
+      .footer-hints { display: none; }
+      .mobile-note { padding: 0 16px; font-size: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="header-top">
+      <div class="header-left">
+        <img src="/logo.png" alt="Hermes" class="header-logo">
+        <div class="header-text">
+          <h1>Hermes on Umbrel</h1>
+          <p class="subtitle">Your personal AI agent.</p>
+        </div>
+      </div>
+      <a id="btn-dashboard" class="btn-dashboard" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        Dashboard
+      </a>
+    </div>
+    <div class="pro-tip">
+      <strong>Note:</strong> Update Hermes only from the Umbrel App Store. Running <code>hermes update</code> in the terminal may cause issues.
+    </div>
+    <div class="pro-tip">
+      <strong>Tip:</strong> After setting up messaging (Telegram, Discord, WhatsApp, etc.), restart Hermes from your umbrelOS home screen for changes to take effect.
+    </div>
+  </div>
+
+  <div class="mobile-note">
+    For the best experience, use a desktop browser.
+  </div>
+
+  <div class="terminal-wrapper">
+    <div class="terminal-card">
+      <div class="titlebar">
+        <div class="titlebar-dot close"></div>
+        <div class="titlebar-dot minimize"></div>
+        <div class="titlebar-dot maximize"></div>
+        <span class="titlebar-label">hermes</span>
+      </div>
+      <div class="terminal-info">
+        <div class="info-heading">Welcome to Hermes Agent</div>
+        <div class="info-dim">This terminal drops you into chat with Hermes after initial setup. Press Ctrl+D to exit chat and access the shell for commands like hermes model and hermes doctor.</div>
+      </div>
+      <div class="terminal-body">
+        <div id="terminal"></div>
+      </div>
+      <div class="terminal-footer">
+        <span class="footer-hints">
+          <kbd>↑↓</kbd> Navigate <kbd>Enter</kbd> Select <kbd id="paste-hint">Ctrl+V</kbd> Paste
+        </span>
+        <span class="footer-right">
+          <span id="footer-message" class="footer-message"></span>
+          <!-- blur() before reload prevents browser from restoring focus to button instead of terminal -->
+          <button id="btn-reconnect" class="btn-reconnect" onclick="this.blur(); location.reload()">&#x21bb; New session</button>
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // Dashboard is proxied through this server — no separate port needed
+      const dashBtn = document.getElementById('btn-dashboard');
+      dashBtn.href = '/status';
+
+      const footerMessage = document.getElementById('footer-message');
+
+      // Show correct paste shortcut for OS
+      if (navigator.platform.indexOf('Mac') !== -1) {
+        document.getElementById('paste-hint').textContent = '\u2318V';
+      }
+
+      const term = new Terminal({
+        cursorBlink: true,
+        cursorStyle: 'block',
+        fontSize: 13,
+        fontFamily: "'Menlo', 'Monaco', 'Cascadia Code', 'Courier New', monospace",
+        lineHeight: 1.2,
+        theme: {
+          background:    '#111113',
+          foreground:    '#D4D4D8',
+          cursor:        '#FFBF00',
+          cursorAccent:  '#111113',
+          selectionBackground: 'rgba(255,191,0,0.25)',
+          black:         '#18181B',
+          red:           '#EF4444',
+          green:         '#22C55E',
+          yellow:        '#EAB308',
+          blue:          '#3B82F6',
+          magenta:       '#A855F7',
+          cyan:          '#06B6D4',
+          white:         '#D4D4D8',
+          brightBlack:   '#3F3F46',
+          brightRed:     '#F87171',
+          brightGreen:   '#34D399',
+          brightYellow:  '#FBBF24',
+          brightBlue:    '#60A5FA',
+          brightMagenta: '#C084FC',
+          brightCyan:    '#22D3EE',
+          brightWhite:   '#FAFAFA',
+        },
+        scrollback: 5000,
+        rows: 24,
+        cols: 80,
+      });
+
+      const fitAddon = new FitAddon.FitAddon();
+      term.loadAddon(fitAddon);
+      term.open(document.getElementById('terminal'));
+      fitAddon.fit();
+      term.focus();
+
+      // Refocus terminal on click outside buttons
+      document.addEventListener('click', (e) => {
+        if (!e.target.closest('.btn-reconnect') && !e.target.closest('.btn-dashboard')) {
+          term.focus();
+        }
+      });
+
+      const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const ws = new WebSocket(proto + '//' + location.host + '/umbrel/api/terminal?token=__SETUP_TOKEN__');
+
+      ws.onopen = () => {
+        ws.send(JSON.stringify({ type: 'resize', cols: term.cols, rows: term.rows }));
+        term.focus();
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+          if (msg.type === 'output') {
+            term.write(msg.data);
+          } else if (msg.type === 'exit') {
+            term.write('\r\n\x1b[38;5;242mSession ended. Click "New session" to reconnect.\x1b[0m\r\n');
+            footerMessage.textContent = 'Session ended';
+            footerMessage.className = 'footer-message';
+          }
+        } catch (e) {}
+      };
+
+      ws.onclose = () => {
+        if (!footerMessage.textContent.includes('ended')) {
+          footerMessage.textContent = 'Connection lost';
+          footerMessage.className = 'footer-message error';
+        }
+      };
+
+      ws.onerror = () => {
+        footerMessage.textContent = 'Connection error';
+        footerMessage.className = 'footer-message error';
+      };
+
+      term.onData((data) => {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: 'input', data }));
+        }
+      });
+
+      const resizeObserver = new ResizeObserver(() => {
+        fitAddon.fit();
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: 'resize', cols: term.cols, rows: term.rows }));
+        }
+      });
+      resizeObserver.observe(document.getElementById('terminal'));
+    });
+  </script>
+</body>
+</html>
