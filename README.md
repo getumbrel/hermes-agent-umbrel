@@ -21,7 +21,7 @@ Two containers share a single data volume (`/opt/data`):
 - **web** — Node.js server providing the terminal UI (xterm.js + PTY) and the official Hermes dashboard (running as a background process, proxied via localhost). This is the main entry point behind the umbrelOS app proxy.
 - **gateway** — Official Hermes Agent image (`nousresearch/hermes-agent`) running the messaging gateway for platform integrations. Used as-is with no modifications.
 
-The dashboard is only accessible through the web container's proxied port, ensuring it's protected by umbrelOS authentication.
+The terminal is served at `/terminal` (the umbrelOS app entry point). The dashboard owns `/` and all other paths are proxied to it, ensuring it's protected by umbrelOS authentication.
 
 ## License
 
