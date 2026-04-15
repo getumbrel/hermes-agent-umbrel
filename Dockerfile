@@ -1,7 +1,7 @@
 # Hermes Agent on Umbrel
 # Web terminal wrapper around the official Hermes Agent image
 
-FROM nousresearch/hermes-agent:latest
+FROM nousresearch/hermes-agent:v2026.4.13
 
 USER root
 
