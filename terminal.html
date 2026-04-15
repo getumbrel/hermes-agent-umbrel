@@ -361,9 +361,9 @@
   <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.min.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      // Dashboard is proxied through this server — no separate port needed
+      // Dashboard owns / — proxied through this server
       const dashBtn = document.getElementById('btn-dashboard');
-      dashBtn.href = '/status';
+      dashBtn.href = '/';
 
       const footerMessage = document.getElementById('footer-message');
 

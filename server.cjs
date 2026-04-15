@@ -43,8 +43,8 @@ function proxyToDashboard(req, res) {
 }
 
 const server = http.createServer((req, res) => {
-  // Serve terminal page at root
-  if (req.url === "/" || req.url === "/index.html") {
+  // Serve terminal page at /terminal (Umbrel app manifest points here)
+  if (req.url === "/terminal") {
     res.writeHead(200, { "Content-Type": "text/html" });
     res.end(TERMINAL_HTML.replace("__SETUP_TOKEN__", SETUP_TOKEN));
     return;

@@ -25,7 +25,8 @@ services:
 
   # Hermes messaging gateway
   gateway:
-    image: nousresearch/hermes-agent:v2026.4.13
+    # Pinned to latest (v2026.4.13) by digest — see Dockerfile comment
+    image: nousresearch/hermes-agent:latest@sha256:b0f87728fb313f97c91d19178624a2a67375d6ceeb27800853c866f94c42dfed
     container_name: hermes-gateway
     restart: unless-stopped
     command: gateway run
