@@ -9,10 +9,7 @@ services:
     user: "1000:1000"
     environment:
       APP_SEED: ${APP_SEED:-dev} # Provided by umbrelOS; fallback for local dev
-      # GATEWAY_HEALTH_URL was merged (45595f48, 2026-04-14) but not yet released.
-      # Until a new image includes it, the dashboard's gateway status card will
-      # show "stopped" because it falls back to local PID detection which can't
-      # see across containers. Remove this comment once the fix is released.
+      # Tells the dashboard to probe the gateway via HTTP instead of local PID detection
       GATEWAY_HEALTH_URL: http://hermes-gateway:8642
     ports:
       - "18789:18789"
@@ -33,11 +30,11 @@ services:
     environment:
       HERMES_UID: "1000"
       HERMES_GID: "1000"
+      API_SERVER_ENABLED: "true"
+      API_SERVER_HOST: "0.0.0.0"
+      API_SERVER_KEY: ${APP_SEED:-hermes-internal-key}
     volumes:
       - ./data:/opt/data
-    # API_SERVER_ENABLED: "true" — not needed until GATEWAY_HEALTH_URL fix is released.
-    # Add it back (along with API_SERVER_KEY for inter-container auth) when the
-    # dashboard can actually probe the gateway over HTTP.
     networks:
       - hermes-net
 
