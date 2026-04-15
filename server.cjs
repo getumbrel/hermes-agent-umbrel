@@ -11,7 +11,7 @@ const PORT = parseInt(process.env.PORT || "18789");
 // APP_SEED (per-app secret from umbrelOS) is embedded in the served HTML.
 const SETUP_TOKEN = process.env.APP_SEED || "";
 const DATA_DIR = "/opt/data";
-const DASHBOARD_HOST = "hermes-dashboard";
+const DASHBOARD_HOST = "127.0.0.1";
 const DASHBOARD_PORT = 9119;
 
 let ptyProcess = null;
@@ -35,7 +35,7 @@ function proxyToDashboard(req, res) {
   });
 
   proxy.on("error", () => {
-    res.writeHead(502, { "Content-Type": "text/html" });
+    res.writeHead(502, { "Content-Type": "text/html", "Cache-Control": "no-store" });
     res.end("<html><body><h2>Dashboard is starting...</h2><p>Please wait a moment and refresh.</p></body></html>");
   });
 

@@ -14,7 +14,11 @@
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', Roboto, sans-serif;
-      background: #0F0F0F;
+      background:
+        radial-gradient(circle at 16% 14%, rgba(255, 217, 93, 0.11), transparent 20%),
+        radial-gradient(circle at 84% 12%, rgba(255, 90, 45, 0.12), transparent 24%),
+        radial-gradient(circle at 52% 100%, rgba(255, 127, 31, 0.08), transparent 30%),
+        linear-gradient(180deg, #121212 0%, #0D0D0D 100%);
       color: #E4E4E7;
       height: 100vh;
       display: flex;
@@ -304,8 +308,8 @@
       <div class="header-left">
         <img src="/logo.png" alt="Hermes" class="header-logo">
         <div class="header-text">
-          <h1>Hermes on Umbrel</h1>
-          <p class="subtitle">Your personal AI agent.</p>
+          <h1>Hermes Agent</h1>
+          <p class="subtitle">The AI agent that grows with you.</p>
         </div>
       </div>
       <a id="btn-dashboard" class="btn-dashboard" target="_blank" rel="noopener">
@@ -334,7 +338,7 @@
         <span class="titlebar-label">hermes</span>
       </div>
       <div class="terminal-info">
-        <div class="info-heading">Welcome to Hermes Agent</div>
+        <div class="info-heading">Welcome to Hermes Agent on Umbrel</div>
         <div class="info-dim">This terminal drops you into chat with Hermes after initial setup. Press Ctrl+D to exit chat and access the shell for commands like hermes model and hermes doctor.</div>
       </div>
       <div class="terminal-body">

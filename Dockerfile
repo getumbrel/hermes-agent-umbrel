@@ -23,6 +23,15 @@ RUN chmod +x /app/entrypoint.sh /app/start-hermes.sh
 # Ensure hermes venv is in PATH (base image sets this in its entrypoint, not ENV)
 ENV PATH="/opt/hermes/.venv/bin:${PATH}"
 
+# The dashboard's first-run npm build writes to /opt/hermes/web/ which is owned
+# by UID 10000 in the base image. Since we run as UID 1000 (via compose user:),
+# we need to fix ownership at build time.
+# Dashboard needs write access to web/ (npm install), hermes_cli/web_dist/ (build
+# output), and /.npm (cache). All owned by UID 10000 in the base image.
+RUN mkdir -p /opt/hermes/hermes_cli/web_dist && \
+    chown -R 1000:1000 /opt/hermes/web/ /opt/hermes/hermes_cli/web_dist/ /app/ && \
+    mkdir -p /.npm && chown -R 1000:1000 /.npm
+
 # UID/GID set via user: 1000:1000 in docker-compose.yml
 ENTRYPOINT ["/app/entrypoint.sh"]
 EXPOSE 18789
