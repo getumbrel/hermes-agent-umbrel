@@ -30,6 +30,10 @@ services:
     environment:
       HERMES_UID: "1000"
       HERMES_GID: "1000"
+      # API server exposes the health endpoint the dashboard probes via GATEWAY_HEALTH_URL.
+      # Must bind to 0.0.0.0 (not default 127.0.0.1) to be reachable from the web container.
+      # Binding to 0.0.0.0 requires an API key — we reuse APP_SEED since the port is
+      # internal only (not exposed to host).
       API_SERVER_ENABLED: "true"
       API_SERVER_HOST: "0.0.0.0"
       API_SERVER_KEY: ${APP_SEED:-hermes-internal-key}
