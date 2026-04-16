@@ -22,8 +22,14 @@ RUN cd /app && npm install --omit=dev
 COPY server.cjs terminal.html logo.png entrypoint.sh start-hermes.sh /app/
 RUN chmod +x /app/entrypoint.sh /app/start-hermes.sh
 
-# Ensure hermes venv is in PATH (base image sets this in its entrypoint, not ENV)
+# Ensure hermes venv is in PATH everywhere. The agent's terminal tool spawns
+# subprocesses that may not inherit Docker ENV, so we cover all cases:
+# - ENV: for the entrypoint, Node server, and direct child processes
+# - /etc/profile.d/: for login shells (which /etc/profile resets PATH on)
+# - symlink: guarantees `hermes` is found regardless of how the shell is spawned
 ENV PATH="/opt/hermes/.venv/bin:${PATH}"
+RUN echo 'export PATH="/opt/hermes/.venv/bin:$PATH"' > /etc/profile.d/hermes-venv.sh && \
+    ln -s /opt/hermes/.venv/bin/hermes /usr/local/bin/hermes
 
 # The dashboard's first-run npm build writes to /opt/hermes/web/ which is owned
 # by UID 10000 in the base image. Since we run as UID 1000 (via compose user:),
