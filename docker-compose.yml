@@ -4,6 +4,7 @@ services:
     build: .
     image: hermes-agent-umbrel:latest
     container_name: hermes-web
+    hostname: hermes # Shell prompt shows "umbrel@hermes" instead of "umbrel@<container-id>"
     restart: unless-stopped
     init: true
     user: "1000:1000"

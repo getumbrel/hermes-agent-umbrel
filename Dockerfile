@@ -40,6 +40,11 @@ RUN mkdir -p /opt/hermes/hermes_cli/web_dist && \
     chown -R 1000:1000 /opt/hermes/web/ /opt/hermes/hermes_cli/web_dist/ /app/ && \
     mkdir -p /.npm && chown -R 1000:1000 /.npm
 
+# Add a passwd entry for UID 1000 so bash shows a name instead of
+# "I have no name!@..." when dropping to a shell via Ctrl+D.
+# The base image's hermes user is UID 10000 — we leave it untouched.
+RUN groupadd -g 1000 umbrel && useradd -u 1000 -g 1000 -d /opt/data -s /bin/bash umbrel
+
 # UID/GID set via user: 1000:1000 in docker-compose.yml
 ENTRYPOINT ["/app/entrypoint.sh"]
 EXPOSE 18789
