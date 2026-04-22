@@ -87,6 +87,7 @@ jobs:
           release_tag="${{ steps.release.outputs.release_tag }}"
 
           sed -i -E "s|FROM nousresearch/hermes-agent:[^@[:space:]]+@sha256:[a-f0-9]{64}|FROM nousresearch/hermes-agent:${latest_version}@${latest_digest}|" Dockerfile
+          sed -i -E "s|([[:space:]]+image: hermes-agent-umbrel:).*|\\1${release_tag}|" docker-compose.yml
           sed -i -E "s|([[:space:]]+image: nousresearch/hermes-agent:)[^@[:space:]]+@sha256:[a-f0-9]{64}|\\1${latest_version}@${latest_digest}|" docker-compose.yml
           sed -i -E "s|^# To update: docker buildx imagetools inspect nousresearch/hermes-agent:.*$|# To update: docker buildx imagetools inspect nousresearch/hermes-agent:${latest_version}|" Dockerfile
 
