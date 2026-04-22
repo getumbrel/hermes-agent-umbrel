@@ -1,0 +1,50 @@
+name: Tag Hermes Version On Merge
+
+on:
+  pull_request_target:
+    types:
+      - closed
+
+jobs:
+  tag-merged-pr:
+    if: >-
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.base.ref == github.event.repository.default_branch &&
+      contains(github.event.pull_request.labels.*.name, 'hermes-update') &&
+      startsWith(github.event.pull_request.head.ref, 'bot/hermes-update-')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout merge commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+          fetch-depth: 0
+
+      - name: Read Hermes release tag from PR branch
+        id: release
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          tag="${{ github.event.pull_request.head.ref }}"
+          tag="${tag#bot/hermes-update-}"
+
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+
+      - name: Create tag if missing
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="${{ steps.release.outputs.tag }}"
+
+          git fetch --tags
+
+          if git rev-parse -q --verify "refs/tags/${tag}" >/dev/null; then
+            echo "Tag ${tag} already exists; nothing to do."
+            exit 0
+          fi
+
+          git tag "${tag}" "${{ github.event.pull_request.merge_commit_sha }}"
+          git push origin "${tag}"
