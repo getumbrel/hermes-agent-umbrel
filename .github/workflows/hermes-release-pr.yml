@@ -1,0 +1,114 @@
+name: Hermes Release PR
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+jobs:
+  check-and-pr:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Docker buildx
+        run: docker buildx create --use
+
+      - name: Get current and latest Hermes image details
+        id: release
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          release_json=$(curl -fsSL \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ github.token }}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/NousResearch/hermes-agent/releases/latest")
+
+          latest_version=$(python3 -c 'import json,sys; print(json.load(sys.stdin)["tag_name"])' <<< "${release_json}")
+          image="nousresearch/hermes-agent:${latest_version}"
+          current_image=$(grep -oE 'nousresearch/hermes-agent:[^@[:space:]]+@sha256:[a-f0-9]{64}' Dockerfile | head -n1 || true)
+          current_digest=$(printf '%s' "${current_image}" | cut -d'@' -f2)
+          current_version=$(printf '%s' "${current_image}" | sed -nE 's|.*nousresearch/hermes-agent:([^@]+)@sha256:[a-f0-9]{64}|\1|p')
+          if [[ -z "${current_version}" || "${current_version}" == "latest" ]]; then
+            if [[ -n "${current_digest}" ]]; then
+              docker pull "nousresearch/hermes-agent@${current_digest}" >/dev/null
+              current_version=$(docker inspect --format '{{ index .Config.Labels "org.opencontainers.image.version" }}' "nousresearch/hermes-agent@${current_digest}" 2>/dev/null || true)
+            fi
+          fi
+
+          inspect_output=$(docker buildx imagetools inspect "${image}")
+          latest_digest=$(printf '%s\n' "${inspect_output}" | awk '/^Digest:/ { print $2; exit }')
+
+          if [[ -z "${latest_digest}" ]]; then
+            echo "Failed to resolve latest digest for ${image}" >&2
+            exit 1
+          fi
+
+          latest_digest_short="${latest_digest#sha256:}"
+          latest_digest_short="${latest_digest_short:0:12}"
+          release_tag_source="${latest_version}"
+          release_tag=$(printf '%s' "${release_tag_source}" | tr -cs '[:alnum:]._-' '-')
+          release_tag="${release_tag#-}"
+          release_tag="${release_tag%-}"
+          if [[ -z "${release_tag}" ]]; then
+            release_tag="digest-${latest_digest_short}"
+          fi
+          current_version_display="${current_version:-unknown}"
+          latest_version_display="${latest_version}"
+
+          echo "current_digest=${current_digest}" >> "$GITHUB_OUTPUT"
+          echo "current_version=${current_version}" >> "$GITHUB_OUTPUT"
+          echo "current_version_display=${current_version_display}" >> "$GITHUB_OUTPUT"
+          echo "latest_digest=${latest_digest}" >> "$GITHUB_OUTPUT"
+          echo "latest_version=${latest_version}" >> "$GITHUB_OUTPUT"
+          echo "latest_version_display=${latest_version_display}" >> "$GITHUB_OUTPUT"
+          echo "release_tag=${release_tag}" >> "$GITHUB_OUTPUT"
+
+          if [[ "${current_digest}" == "${latest_digest}" && "${current_version}" == "${latest_version}" ]]; then
+            echo "update_needed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "update_needed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Update Hermes image pin
+        if: steps.release.outputs.update_needed == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          latest_version="${{ steps.release.outputs.latest_version }}"
+          latest_digest="${{ steps.release.outputs.latest_digest }}"
+          release_tag="${{ steps.release.outputs.release_tag }}"
+
+          sed -i -E "s|FROM nousresearch/hermes-agent:[^@[:space:]]+@sha256:[a-f0-9]{64}|FROM nousresearch/hermes-agent:${latest_version}@${latest_digest}|" Dockerfile
+          sed -i -E "s|([[:space:]]+image: nousresearch/hermes-agent:)[^@[:space:]]+@sha256:[a-f0-9]{64}|\\1${latest_version}@${latest_digest}|" docker-compose.yml
+          sed -i -E "s|^# To update: docker buildx imagetools inspect nousresearch/hermes-agent:.*$|# To update: docker buildx imagetools inspect nousresearch/hermes-agent:${latest_version}|" Dockerfile
+
+      - name: Create or update pull request
+        if: steps.release.outputs.update_needed == 'true'
+        uses: peter-evans/create-pull-request@c0f553fe549906ede9cf27b5156039d195d2ece0 # v8.1.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: bot/hermes-update-${{ steps.release.outputs.release_tag }}
+          delete-branch: true
+          commit-message: "chore: bump hermes-agent to ${{ steps.release.outputs.release_tag }}"
+          title: "chore: bump hermes-agent to ${{ steps.release.outputs.release_tag }}"
+          body: |
+            Automated update for Hermes Agent.
+
+            - Current digest: `${{ steps.release.outputs.current_digest }}`
+            - Latest digest: `${{ steps.release.outputs.latest_digest }}`
+            - Current version: `${{ steps.release.outputs.current_version_display }}`
+            - Latest version: `${{ steps.release.outputs.latest_version_display }}`
+
+            This updates the upstream image pin in both `Dockerfile` and `docker-compose.yml`.
+
+            After this PR is merged, a separate workflow tags the merge commit with `${{ steps.release.outputs.release_tag }}` to trigger the container build.
+          labels: |
+            hermes-update
