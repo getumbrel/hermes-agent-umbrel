@@ -2,7 +2,7 @@ services:
   # Web terminal UI + dashboard (proxied through Node server)
   web:
     build: .
-    image: hermes-agent-umbrel:v2026.4.16
+    image: hermes-agent-umbrel:v2026.4.23
     container_name: hermes-web
     hostname: hermes # Shell prompt shows "umbrel@hermes" instead of "umbrel@<container-id>"
     restart: unless-stopped
@@ -23,7 +23,7 @@ services:
 
   # Hermes messaging gateway
   gateway:
-    image: nousresearch/hermes-agent:v2026.4.16@sha256:14ba9a26cf2d498ea773f1825326c404795ec4cb436a9479d22b7a345396c370
+    image: nousresearch/hermes-agent:v2026.4.23@sha256:d4ee57f254aabbe10e41c49533bbf3eb98e6b026463c42843a07588e45ddd338
     container_name: hermes-gateway
     restart: unless-stopped
     command: gateway run
