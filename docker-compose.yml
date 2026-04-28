@@ -13,7 +13,7 @@ services:
       # Tells the dashboard to probe the gateway via HTTP instead of local PID detection
       GATEWAY_HEALTH_URL: http://hermes-gateway:8642
     ports:
-      - "18789:18789"
+      - "18790:18789"
     volumes:
       - ./data:/opt/data
     networks:

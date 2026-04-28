@@ -26,7 +26,10 @@ function proxyToDashboard(req, res) {
     port: DASHBOARD_PORT,
     path: req.url,
     method: req.method,
-    headers: req.headers,
+    headers: {
+      ...req.headers,
+      host: DASHBOARD_HOST + ":" + DASHBOARD_PORT,
+    },
   };
 
   const proxy = http.request(options, (proxyRes) => {
