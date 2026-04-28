@@ -19,6 +19,11 @@ let ptyProcess = null;
 const TERMINAL_HTML = fs.readFileSync("/app/terminal.html", "utf8");
 const LOGO = fs.readFileSync(path.join(__dirname, "logo.png"));
 
+function blockHermesUpdate(req, res) {
+  res.writeHead(403, { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" });
+  res.end("Hermes updates are managed by umbrelOS app updates.");
+}
+
 // Proxy HTTP requests to the dashboard container
 function proxyToDashboard(req, res) {
   const options = {
@@ -28,6 +33,9 @@ function proxyToDashboard(req, res) {
     method: req.method,
     headers: {
       ...req.headers,
+      // Hermes validates Host against its loopback dashboard bind address.
+      // Rewriting is safe in Umbrel because app_proxy authenticates requests
+      // before they reach this wrapper; direct network exposure is not supported.
       host: DASHBOARD_HOST + ":" + DASHBOARD_PORT,
     },
   };
@@ -46,17 +54,27 @@ function proxyToDashboard(req, res) {
 }
 
 const server = http.createServer((req, res) => {
+  const requestUrl = new URL(req.url || "/", "http://localhost");
+  const requestPath = requestUrl.pathname.replace(/\/+$/, "");
+
   // Serve terminal page at /terminal (Umbrel app manifest points here)
-  if (req.url === "/terminal") {
+  if (requestPath === "/terminal") {
     res.writeHead(200, { "Content-Type": "text/html" });
     res.end(TERMINAL_HTML.replace("__SETUP_TOKEN__", SETUP_TOKEN));
     return;
   }
 
   // Serve static assets for terminal UI
-  if (req.url === "/logo.png") {
+  if (requestPath === "/logo.png") {
     res.writeHead(200, { "Content-Type": "image/png", "Cache-Control": "public, max-age=86400" });
     res.end(LOGO);
+    return;
+  }
+
+  // Block the dashboard's `hermes update` action; Umbrel updates Hermes via app images.
+  // Match the parsed pathname so query strings cannot bypass the block.
+  if (req.method === "POST" && requestPath === "/api/hermes/update") {
+    blockHermesUpdate(req, res);
     return;
   }
 
