@@ -24,6 +24,11 @@ function blockHermesUpdate(req, res) {
   res.end("Hermes updates are managed by umbrelOS app updates.");
 }
 
+function blockGatewayRestart(req, res) {
+  res.writeHead(403, { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" });
+  res.end("Gateway restarts are managed by umbrelOS. Restart Hermes from the umbrelOS homescreen.");
+}
+
 // Proxy HTTP requests to the dashboard container
 function proxyToDashboard(req, res) {
   const options = {
@@ -75,6 +80,14 @@ const server = http.createServer((req, res) => {
   // Match the parsed pathname so query strings cannot bypass the block.
   if (req.method === "POST" && requestPath === "/api/hermes/update") {
     blockHermesUpdate(req, res);
+    return;
+  }
+
+  // Upstream documents separate dashboard/gateway containers, but this action
+  // still shells out locally. In Umbrel that would run from the web container
+  // instead of restarting the gateway container managed by umbrelOS/Docker.
+  if (req.method === "POST" && requestPath === "/api/gateway/restart") {
+    blockGatewayRestart(req, res);
     return;
   }
 
