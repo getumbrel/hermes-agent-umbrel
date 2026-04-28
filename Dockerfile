@@ -30,13 +30,13 @@ ENV PATH="/opt/hermes/.venv/bin:${PATH}"
 RUN echo 'export PATH="/opt/hermes/.venv/bin:$PATH"' > /etc/profile.d/hermes-venv.sh && \
     ln -s /opt/hermes/.venv/bin/hermes /usr/local/bin/hermes
 
-# The dashboard's first-run npm build writes to /opt/hermes/web/ which is owned
-# by UID 10000 in the base image. Since we run as UID 1000 (via compose user:),
-# we need to fix ownership at build time.
-# Dashboard needs write access to web/ (npm install), hermes_cli/web_dist/ (build
-# output), and /.npm (cache). All owned by UID 10000 in the base image.
+# The dashboard's first-run npm build and opt-in `hermes --tui` setup write
+# under /opt/hermes/, which is owned by UID 10000 in the base image. Since we
+# run as UID 1000 (via compose user:), fix ownership at build time.
+# Dashboard needs web/ and hermes_cli/web_dist/; TUI needs ui-tui/ for its
+# first-run npm install/build. Both use /.npm for cache.
 RUN mkdir -p /opt/hermes/hermes_cli/web_dist && \
-    chown -R 1000:1000 /opt/hermes/web/ /opt/hermes/hermes_cli/web_dist/ /app/ && \
+    chown -R 1000:1000 /opt/hermes/web/ /opt/hermes/ui-tui/ /opt/hermes/hermes_cli/web_dist/ /app/ && \
     mkdir -p /.npm && chown -R 1000:1000 /.npm
 
 # Add a passwd entry for UID 1000 so bash shows a name instead of
