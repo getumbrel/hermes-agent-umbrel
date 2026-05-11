@@ -2,7 +2,7 @@ services:
   # Web terminal UI + dashboard (proxied through Node server)
   web:
     build: .
-    image: hermes-agent-umbrel:v2026.5.7
+    image: hermes-agent-umbrel:v2026.5.7-1
     container_name: hermes-web
     hostname: hermes # Shell prompt shows "umbrel@hermes" instead of "umbrel@<container-id>"
     restart: unless-stopped
