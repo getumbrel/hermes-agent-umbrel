@@ -20,6 +20,7 @@
         radial-gradient(circle at 52% 100%, rgba(255, 127, 31, 0.08), transparent 30%),
         linear-gradient(180deg, #121212 0%, #0D0D0D 100%);
       color: #E4E4E7;
+      min-height: 100vh;
       height: 100vh;
       height: 100dvh;
       display: flex;
@@ -289,8 +290,72 @@
       color: #71717A;
     }
 
+    .mobile-toolbar {
+      display: none;
+      flex-shrink: 0;
+      background: #18181B;
+      border-top: 1px solid #27272A;
+      padding: 10px 12px 12px;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .mobile-input {
+      position: fixed;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateX(-100vw);
+    }
+
+    .mobile-type-button {
+      width: 100%;
+      min-height: 42px;
+    }
+
+    .mobile-controls {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-areas:
+        "left up down right"
+        "escape space backspace enter";
+      gap: 8px;
+    }
+
+    .mobile-key-escape { grid-area: escape; }
+    .mobile-key-backspace { grid-area: backspace; }
+    .mobile-key-enter { grid-area: enter; }
+    .mobile-key-space { grid-area: space; }
+    .mobile-key-left { grid-area: left; }
+    .mobile-key-up { grid-area: up; }
+    .mobile-key-down { grid-area: down; }
+    .mobile-key-right { grid-area: right; }
+
+    .mobile-key {
+      min-height: 40px;
+      padding: 8px 10px;
+      background: #111113;
+      border: 1px solid #3F3F46;
+      border-radius: 8px;
+      color: #D4D4D8;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      touch-action: manipulation;
+      transition: border-color 0.15s, color 0.15s, background 0.15s;
+    }
+
+    .mobile-key:active {
+      background: #27272A;
+      border-color: #FFBF00;
+      color: #FFBF00;
+    }
+
     @media (pointer: coarse) {
       .mobile-note { display: block; }
+      .mobile-toolbar { display: flex; }
     }
 
     /* Short desktop viewports need to preserve terminal height over surrounding UI. */
@@ -338,18 +403,25 @@
     }
 
     @media (max-width: 600px) {
+      body { min-height: 100svh; min-height: 100dvh; height: 100dvh; overflow: hidden; }
       .header { padding: 12px 16px 0; }
       .header-top { flex-direction: column; align-items: flex-start; gap: 10px; }
       .header-logo { display: none; }
       .header-text h1 { font-size: 18px; }
       .pro-tip { display: none; }
       .terminal-info { display: none; }
-      .terminal-wrapper { padding: 8px 16px 8px; }
-      .terminal-footer { padding: 6px 8px; min-height: 32px; }
+      .terminal-wrapper { flex: 1; min-height: 0; padding: 8px 12px calc(8px + env(safe-area-inset-bottom)); }
+      .terminal-card { flex: 1; min-height: 0; max-height: none; }
+      .terminal-body { min-height: clamp(240px, 44vh, 420px); }
+      .mobile-toolbar { padding: 6px 8px calc(8px + env(safe-area-inset-bottom)); gap: 6px; }
+      .mobile-type-button { min-height: 38px; }
+      .mobile-controls { gap: 6px; }
+      .mobile-key { min-height: 34px; padding: 6px 6px; font-size: 12px; }
+      .terminal-footer { padding: 4px 8px; min-height: 28px; }
       .btn-reconnect { padding: 4px 10px; font-size: 11px; }
       .footer-message { font-size: 11px; }
       .footer-hints { display: none; }
-      .mobile-note { padding: 0 16px; font-size: 12px; }
+      .mobile-note { padding: 0 16px; font-size: 12px; line-height: 1.4; }
     }
   </style>
 </head>
@@ -377,7 +449,7 @@
   </div>
 
   <div class="mobile-note">
-    For the best experience, use a desktop browser.
+    Use the controls below to type, navigate, and select options.
   </div>
 
   <div class="terminal-wrapper">
@@ -394,6 +466,21 @@
       </div>
       <div class="terminal-body">
         <div id="terminal"></div>
+      </div>
+      <div class="mobile-toolbar">
+        <!-- Keyboard bridge only: typed characters are forwarded to the terminal above. -->
+        <input id="mobile-input" class="mobile-input" type="password" tabindex="-1" aria-label="Terminal input" autocapitalize="off" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="done">
+        <button id="mobile-keyboard" class="mobile-key mobile-type-button" type="button">Open keyboard</button>
+        <div class="mobile-controls">
+          <button class="mobile-key mobile-key-escape" type="button" data-key="escape">Esc</button>
+          <button class="mobile-key mobile-key-backspace" type="button" data-key="backspace">&#x232b;</button>
+          <button class="mobile-key mobile-key-enter" type="button" data-key="enter">Enter</button>
+          <button class="mobile-key mobile-key-space" type="button" data-key="space">Space</button>
+          <button class="mobile-key mobile-key-left" type="button" data-key="arrow-left">&#x2190;</button>
+          <button class="mobile-key mobile-key-up" type="button" data-key="arrow-up">&#x2191;</button>
+          <button class="mobile-key mobile-key-down" type="button" data-key="arrow-down">&#x2193;</button>
+          <button class="mobile-key mobile-key-right" type="button" data-key="arrow-right">&#x2192;</button>
+        </div>
       </div>
       <div class="terminal-footer">
         <span class="footer-hints">
@@ -419,6 +506,14 @@
       const footerMessage = document.getElementById('footer-message');
       const terminalElement = document.getElementById('terminal');
       const terminalBody = document.querySelector('.terminal-body');
+      const mobileInput = document.getElementById('mobile-input');
+      const mobileKeyboardButton = document.getElementById('mobile-keyboard');
+      const mobileButtons = Array.from(document.querySelectorAll('.mobile-key[data-key]'));
+      const isCoarsePointer = window.matchMedia('(pointer: coarse)').matches;
+      let hasFocusedOnLoad = false;
+      let hasFocusedAfterFirstOutput = false;
+      let fitTimer = null;
+      let ws;
 
       // Show correct paste shortcut for OS
       if (navigator.platform.indexOf('Mac') !== -1) {
@@ -463,21 +558,185 @@
       term.loadAddon(fitAddon);
       term.open(terminalElement);
       fitAddon.fit();
-      term.focus();
+      if (window.matchMedia('(max-width: 600px)').matches) {
+        term.write('\x1b[38;5;220mStarting Hermes terminal...\x1b[0m\r\n\x1b[38;5;242mThis may take a moment before the first prompt appears.\x1b[0m\r\n');
+      }
 
-      // Refocus terminal on click outside buttons
-      document.addEventListener('click', (e) => {
-        if (!e.target.closest('.btn-reconnect') && !e.target.closest('.btn-dashboard')) {
+      const focusDesktopTerminal = () => {
+        term.focus();
+        const helperTextarea = terminalElement.querySelector('.xterm-helper-textarea');
+        if (helperTextarea) {
+          try {
+            helperTextarea.focus({ preventScroll: true });
+          } catch (e) {
+            helperTextarea.focus();
+          }
+        }
+        setTimeout(() => {
           term.focus();
+        }, 0);
+      };
+
+      const focusMobileInput = () => {
+        if (!mobileInput) {
+          return;
+        }
+        try {
+          mobileInput.focus({ preventScroll: true });
+        } catch (e) {
+          mobileInput.focus();
+        }
+      };
+
+      const syncTerminalSize = () => {
+        fitAddon.fit();
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: 'resize', cols: term.cols, rows: term.rows }));
+        }
+      };
+
+      const scheduleTerminalFit = () => {
+        if (fitTimer) {
+          clearTimeout(fitTimer);
+        }
+        fitTimer = setTimeout(() => {
+          syncTerminalSize();
+        }, 30);
+      };
+
+      const scheduleDesktopFocus = () => {
+        if (isCoarsePointer) {
+          return;
+        }
+        focusDesktopTerminal();
+        requestAnimationFrame(() => {
+          focusDesktopTerminal();
+        });
+        setTimeout(() => {
+          focusDesktopTerminal();
+        }, 50);
+        setTimeout(() => {
+          focusDesktopTerminal();
+        }, 250);
+      };
+
+      if (!isCoarsePointer) {
+        scheduleDesktopFocus();
+        hasFocusedOnLoad = true;
+      }
+
+      window.addEventListener('load', () => {
+        if (!isCoarsePointer) {
+          scheduleDesktopFocus();
         }
       });
 
+      document.addEventListener('pointerdown', (e) => {
+        if (e.target.closest('.btn-reconnect') || e.target.closest('.btn-dashboard') || e.target.closest('.mobile-toolbar')) {
+          return;
+        }
+        if (!isCoarsePointer) {
+          scheduleDesktopFocus();
+        }
+      }, true);
+
+      terminalElement.addEventListener('pointerdown', () => {
+        if (!isCoarsePointer) {
+          scheduleDesktopFocus();
+        }
+      }, true);
+
+      window.addEventListener('focus', () => {
+        if (!isCoarsePointer) {
+          scheduleDesktopFocus();
+        }
+      });
+
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden && !isCoarsePointer) {
+          scheduleDesktopFocus();
+        }
+      });
+
+      const getArrowSequence = (direction) => {
+        const suffix = {
+          'arrow-up': 'A',
+          'arrow-down': 'B',
+          'arrow-right': 'C',
+          'arrow-left': 'D',
+        }[direction];
+        const useApplicationMode = !!(term.modes && term.modes.applicationCursorKeysMode);
+        return useApplicationMode ? `\u001bO${suffix}` : `\u001b[${suffix}`;
+      };
+
+      const controlSequences = {
+        enter: '\r',
+        escape: '\u001b',
+        space: ' ',
+        backspace: '\u007f',
+      };
+
+      const sendInput = (data) => {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: 'input', data }));
+        }
+      };
+
+      if (mobileInput) {
+        mobileInput.addEventListener('input', (event) => {
+          const value = event.target.value;
+          if (!value) {
+            return;
+          }
+          sendInput(value);
+          event.target.value = '';
+          scheduleTerminalFit();
+        });
+
+        mobileInput.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter') {
+            event.preventDefault();
+            sendInput('\r');
+            event.target.value = '';
+            scheduleTerminalFit();
+          } else if (event.key === 'Backspace') {
+            event.preventDefault();
+            sendInput(controlSequences.backspace);
+            event.target.value = '';
+            scheduleTerminalFit();
+          }
+        });
+      }
+
+      if (mobileKeyboardButton) {
+        mobileKeyboardButton.addEventListener('click', (event) => {
+          event.preventDefault();
+          focusMobileInput();
+        });
+      }
+
+      mobileButtons.forEach((button) => {
+        button.addEventListener('click', (event) => {
+          event.preventDefault();
+          const key = button.dataset.key;
+          const data = key.startsWith('arrow-') ? getArrowSequence(key) : controlSequences[key];
+          if (data) {
+            sendInput(data);
+          }
+          scheduleTerminalFit();
+        });
+      });
+
       const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const ws = new WebSocket(proto + '//' + location.host + '/umbrel/api/terminal?token=__SETUP_TOKEN__');
+      ws = new WebSocket(proto + '//' + location.host + '/umbrel/api/terminal?token=__SETUP_TOKEN__');
 
       ws.onopen = () => {
         ws.send(JSON.stringify({ type: 'resize', cols: term.cols, rows: term.rows }));
-        term.focus();
+        if (!isCoarsePointer && !hasFocusedOnLoad) {
+          scheduleDesktopFocus();
+          hasFocusedOnLoad = true;
+        }
+        scheduleTerminalFit();
       };
 
       ws.onmessage = (event) => {
@@ -485,6 +744,11 @@
           const msg = JSON.parse(event.data);
           if (msg.type === 'output') {
             term.write(msg.data);
+            scheduleTerminalFit();
+            if (!isCoarsePointer && !hasFocusedAfterFirstOutput) {
+              scheduleDesktopFocus();
+              hasFocusedAfterFirstOutput = true;
+            }
           } else if (msg.type === 'exit') {
             term.write('\r\n\x1b[38;5;242mSession ended. Click "New session" to reconnect.\x1b[0m\r\n');
             footerMessage.textContent = 'Session ended';
@@ -506,18 +770,32 @@
       };
 
       term.onData((data) => {
-        if (ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({ type: 'input', data }));
-        }
+        sendInput(data);
       });
 
       const resizeObserver = new ResizeObserver(() => {
-        fitAddon.fit();
-        if (ws && ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({ type: 'resize', cols: term.cols, rows: term.rows }));
-        }
+        scheduleTerminalFit();
       });
+      resizeObserver.observe(terminalElement);
       resizeObserver.observe(terminalBody);
+
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', () => {
+          scheduleTerminalFit();
+        });
+        window.visualViewport.addEventListener('scroll', () => {
+          scheduleTerminalFit();
+        });
+      }
+
+      if (isCoarsePointer) {
+        requestAnimationFrame(() => {
+          scheduleTerminalFit();
+        });
+        setTimeout(() => {
+          scheduleTerminalFit();
+        }, 150);
+      }
     });
   </script>
 </body>
