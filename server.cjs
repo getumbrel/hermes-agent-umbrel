@@ -107,7 +107,7 @@ wss.on("connection", (ws) => {
     ptyProcess = null;
   }
 
-  ptyProcess = pty.spawn("/app/start-hermes.sh", [], {
+  const sessionPty = pty.spawn("/app/start-hermes.sh", [], {
     name: "xterm-256color",
     cols: 80,
     rows: 24,
@@ -118,8 +118,9 @@ wss.on("connection", (ws) => {
       HOME: DATA_DIR,
     },
   });
+  ptyProcess = sessionPty;
 
-  ptyProcess.onData((data) => {
+  sessionPty.onData((data) => {
     try {
       if (ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ type: "output", data }));
@@ -129,8 +130,9 @@ wss.on("connection", (ws) => {
     }
   });
 
-  ptyProcess.onExit(({ exitCode }) => {
+  sessionPty.onExit(({ exitCode }) => {
     console.log(`PTY exited with code ${exitCode}`);
+    const wasActiveSession = ptyProcess === sessionPty;
     try {
       if (ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ type: "exit", code: exitCode }));
@@ -138,16 +140,21 @@ wss.on("connection", (ws) => {
     } catch (e) {
       console.error("Error sending exit message:", e.message);
     }
-    ptyProcess = null;
+    if (wasActiveSession) {
+      ptyProcess = null;
+    }
   });
 
   ws.on("message", (msg) => {
     try {
       const parsed = JSON.parse(msg);
-      if (parsed.type === "input" && ptyProcess) {
-        ptyProcess.write(parsed.data);
-      } else if (parsed.type === "resize" && ptyProcess) {
-        ptyProcess.resize(parsed.cols, parsed.rows);
+      if (ptyProcess !== sessionPty) {
+        return;
+      }
+      if (parsed.type === "input") {
+        sessionPty.write(parsed.data);
+      } else if (parsed.type === "resize") {
+        sessionPty.resize(parsed.cols, parsed.rows);
       }
     } catch (e) {
       console.error("Error processing terminal input:", e.message);
@@ -156,8 +163,8 @@ wss.on("connection", (ws) => {
 
   ws.on("close", () => {
     console.log("Terminal WebSocket closed");
-    if (ptyProcess) {
-      try { ptyProcess.kill(); } catch (e) {}
+    if (ptyProcess === sessionPty) {
+      try { sessionPty.kill(); } catch (e) {}
       ptyProcess = null;
     }
   });
