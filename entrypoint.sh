@@ -1,10 +1,11 @@
 #!/bin/bash
-# Activate the hermes Python venv, start the dashboard, then the terminal server.
-# Config bootstrapping (directory creation, .env/.yaml copying, skills sync)
-# is handled by the gateway container's official entrypoint.
+# Start the web container: enable managed Umbrel context, run the Hermes
+# dashboard locally, then serve the proxied terminal/dashboard UI.
 set -e
 
 source "/opt/hermes/.venv/bin/activate"
+
+/app/bootstrap-umbrel-context.sh
 
 # Start dashboard in background.
 # Binds to 127.0.0.1 (not 0.0.0.0) since our Node server proxies it — no
