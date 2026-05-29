@@ -13,17 +13,17 @@ if [[ ! -d "${DATA_DIR}" ]]; then
   exit 1
 fi
 
-if [[ -f "${CONFIG_FILE}" ]]; then
-  python3 - "${CONFIG_FILE}" "${SKILLS_SOURCE}" "${PLUGIN_NAME}" <<'PY'
+python3 - "${CONFIG_FILE}" "${SKILLS_SOURCE}" "${PLUGIN_NAME}" <<'PY'
 from pathlib import Path
 import re
 import sys
+import yaml
 
 config_path = Path(sys.argv[1])
 skills_dir = sys.argv[2]
 plugin_name = sys.argv[3]
 
-text = config_path.read_text(encoding="utf-8")
+text = config_path.read_text(encoding="utf-8") if config_path.exists() else ""
 lines = text.splitlines(keepends=True)
 
 def is_top_level_key(line: str) -> bool:
@@ -59,10 +59,13 @@ def ensure_child_list_item(section: str, child: str, item: str):
         return
 
     child_index = None
-    child_re = re.compile(rf"^  {re.escape(child)}:\s*(?:#.*)?$")
+    child_match = None
+    child_re = re.compile(rf"^(  {re.escape(child)}:)([ \t]*)(.*?)([ \t]*(?:#.*)?)$")
     for i in range(section_index + 1, section_end):
-        if child_re.match(lines[i]):
+        match = child_re.match(lines[i].rstrip("\n"))
+        if match:
             child_index = i
+            child_match = match
             break
 
     if child_index is None:
@@ -70,6 +73,25 @@ def ensure_child_list_item(section: str, child: str, item: str):
             f"  {child}:\n",
             f"    - {item}\n",
         ]
+        return
+
+    inline_value = (child_match.group(3) if child_match else "").strip()
+    if inline_value:
+        try:
+            existing = yaml.safe_load(inline_value)
+        except Exception:
+            existing = []
+        if not isinstance(existing, list):
+            existing = []
+        rendered = [f"  {child}:\n"]
+        seen = set()
+        for value in existing + [item]:
+            value = str(value)
+            if value in seen:
+                continue
+            seen.add(value)
+            rendered.append(f"    - {value}\n")
+        lines[child_index:child_index + 1] = rendered
         return
 
     item_re = re.compile(rf"^\s*-\s*{re.escape(item)}\s*(?:#.*)?$")
@@ -99,13 +121,34 @@ def remove_child_list_item(section: str, child: str, item: str):
         return
 
     child_index = None
-    child_re = re.compile(rf"^  {re.escape(child)}:\s*(?:#.*)?$")
+    child_match = None
+    child_re = re.compile(rf"^(  {re.escape(child)}:)([ \t]*)(.*?)([ \t]*(?:#.*)?)$")
     for i in range(section_index + 1, section_end):
-        if child_re.match(lines[i]):
+        match = child_re.match(lines[i].rstrip("\n"))
+        if match:
             child_index = i
+            child_match = match
             break
 
     if child_index is None:
+        return
+
+    inline_value = (child_match.group(3) if child_match else "").strip()
+    if inline_value:
+        try:
+            existing = yaml.safe_load(inline_value)
+        except Exception:
+            existing = []
+        if not isinstance(existing, list):
+            existing = []
+        remaining = [str(value) for value in existing if str(value) != item]
+        if remaining:
+            rendered = [f"  {child}:\n"]
+            for value in remaining:
+                rendered.append(f"    - {value}\n")
+            lines[child_index:child_index + 1] = rendered
+        else:
+            lines[child_index] = f"  {child}: []\n"
         return
 
     item_re = re.compile(rf"^\s*-\s*{re.escape(item)}\s*(?:#.*)?$")
@@ -149,6 +192,3 @@ remove_child_list_item("plugins", "disabled", plugin_name)
 new_text = "".join(lines)
 config_path.write_text(new_text, encoding="utf-8")
 PY
-else
-  echo "Umbrel context: ${CONFIG_FILE} not found yet; plugin and skill config will be reconciled on next startup" >&2
-fi

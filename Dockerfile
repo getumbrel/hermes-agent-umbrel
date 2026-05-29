@@ -21,9 +21,10 @@ RUN cd /app && npm install --omit=dev
 # and external skill directory from config.yaml at startup; the files themselves
 # stay outside /opt/data so the agent cannot edit managed instructions.
 COPY server.cjs terminal.html logo.png entrypoint.sh start-hermes.sh bootstrap-umbrel-context.sh /app/
+COPY umbrel-context-cont-init.sh /etc/cont-init.d/50-umbrel-context
 COPY umbrel-context/skills /app/umbrel-context/skills
 COPY umbrel-context/plugins/umbrel-runtime /opt/hermes/plugins/umbrel-runtime
-RUN chmod +x /app/entrypoint.sh /app/start-hermes.sh /app/bootstrap-umbrel-context.sh
+RUN chmod +x /app/entrypoint.sh /app/start-hermes.sh /app/bootstrap-umbrel-context.sh /etc/cont-init.d/50-umbrel-context
 
 # Ensure hermes venv is in PATH everywhere. The agent's terminal tool spawns
 # subprocesses that may not inherit Docker ENV, so we cover all cases:

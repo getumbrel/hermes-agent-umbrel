@@ -27,8 +27,8 @@ services:
     image: hermes-agent-umbrel:v2026.5.28
     container_name: hermes-gateway
     restart: unless-stopped
-    entrypoint: ["/usr/bin/tini", "-g", "--", "/opt/hermes/docker/entrypoint.sh"]
-    command: gateway run
+    entrypoint: ["/init"]
+    command: ["/opt/hermes/docker/main-wrapper.sh", "gateway", "run"]
     environment:
       HERMES_UID: "1000"
       HERMES_GID: "1000"
