@@ -1,8 +1,8 @@
 # Hermes Agent on Umbrel
 # Web terminal wrapper around the official Hermes Agent image
 
-# To update: docker buildx imagetools inspect nousresearch/hermes-agent:v2026.5.29
-FROM nousresearch/hermes-agent:v2026.5.29@sha256:192a40783e9227b5f162b76af4d133050557adebd46e1c9cb40cb79a1317a9f7
+# To update: docker buildx imagetools inspect nousresearch/hermes-agent:v2026.5.29.2
+FROM nousresearch/hermes-agent:v2026.5.29.2@sha256:2bba4ab37729ebdd864d4caf277b24fec4cd8bfc2855185fd9f4c90f9bf7bfa3
 
 USER root
 
