@@ -28,7 +28,9 @@ services:
     container_name: hermes-gateway
     restart: unless-stopped
     entrypoint: ["/init"]
-    command: ["/opt/hermes/docker/main-wrapper.sh", "gateway", "run"]
+    # Umbrel/Docker already supervises this dedicated gateway container, so opt out
+    # of Hermes' internal s6 gateway supervision and run the gateway in foreground.
+    command: ["/opt/hermes/docker/main-wrapper.sh", "gateway", "run", "--no-supervise"]
     environment:
       HERMES_UID: "1000"
       HERMES_GID: "1000"
