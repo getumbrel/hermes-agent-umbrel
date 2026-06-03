@@ -116,6 +116,7 @@ wss.on("connection", (ws) => {
       ...process.env,
       TERM: "xterm-256color",
       HOME: DATA_DIR,
+      HERMES_SESSION_SOURCE: "umbrel-web",
     },
   });
   ptyProcess = sessionPty;
