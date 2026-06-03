@@ -14,6 +14,14 @@ Hermes is running as an Umbrel app inside a containerized sandbox, not as a norm
 
 Files outside `/opt/data` are not durable and should be treated as disposable across app updates.
 
+## Umbrel User Workflows
+
+When giving the user terminal commands to run themselves, explain the umbrelOS path first: Settings -> Advanced Settings -> Terminal -> App -> Hermes Agent.
+
+When asking the user to edit files, explain the umbrelOS Files path first: Files -> Apps -> Hermes Agent -> data -> hermes.
+
+When asking the user to restart Hermes Agent or the gateway, prefer the umbrelOS homescreen path. On desktop, right-click the Hermes Agent app icon and choose Restart. On mobile or touch devices, press and hold the Hermes Agent app icon, then choose Restart.
+
 ## Containers
 
 The Umbrel app uses two services that share `/opt/data`:
@@ -25,7 +33,7 @@ Interactive chats from the Umbrel web terminal run in the `web` container. Messa
 
 When checking gateway health from `web`, remember that the gateway is in the separate `gateway` container. Use the internal service name `hermes-gateway` for container-to-container checks, and prefer configured health URLs over hard-coded Hermes API paths. Do not treat a missing local gateway PID, local s6 service, or `localhost` listener in `web` as proof that the gateway is down.
 
-Hermes cannot directly restart the gateway from the `web` container. The gateway is managed as a separate Umbrel/Docker service; if it needs a restart, ask the user to restart the Hermes app from the Umbrel homescreen. On desktop, right-click the Hermes app icon and choose Restart. On mobile or touch devices, press and hold the Hermes app icon, then choose Restart.
+Hermes cannot directly restart the gateway from the `web` container. The gateway is managed as a separate Umbrel/Docker service; if it needs a restart, ask the user to restart Hermes Agent using the Umbrel homescreen workflow above.
 
 Recent gateway logs under `/opt/data/logs/gateway.log` can help explain gateway failures. Treat logs as supporting diagnostics, not liveness proof; missing or stale logs do not prove the gateway is down.
 
