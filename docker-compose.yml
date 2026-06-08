@@ -7,13 +7,11 @@ services:
     hostname: hermes # Shell prompt shows "hermes@hermes" instead of "hermes@<container-id>"
     restart: unless-stopped
     environment:
-      APP_SEED: ${APP_SEED:-dev} # Provided by umbrelOS; fallback for local dev
       HERMES_UID: "1000"
       HERMES_GID: "1000"
       # Enable upstream's supervised dashboard service inside the same s6 tree
       # as the gateway, so official dashboard actions like gateway restart work.
       HERMES_DASHBOARD: "1"
-      HERMES_DASHBOARD_HOST: "0.0.0.0"
       HERMES_DASHBOARD_PORT: "18789"
       # Umbrel's app proxy is the auth boundary; do not expose this raw port.
       HERMES_DASHBOARD_INSECURE: "1"
