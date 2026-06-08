@@ -1,5 +1,4 @@
 from pathlib import Path
-import os
 import re
 
 CONTEXT_FILE = Path(__file__).resolve().with_name("RUNTIME_CONTEXT.md")
@@ -26,21 +25,7 @@ def _format_context(text):
 
 
 def _inject_umbrel_runtime_context(**kwargs):
-    context = _load_runtime_context()
-    platform = str(kwargs.get("platform") or "").strip().lower()
-    source = os.environ.get("HERMES_SESSION_SOURCE", "").strip().lower()
-
-    if source == "umbrel-web":
-        context += (
-            "\n- Current chat surface: Umbrel web terminal in the `web` container."
-        )
-    elif platform and platform != "cli":
-        context += (
-            f"\n- Current chat surface: Hermes messaging gateway platform `{platform}` "
-            "in the `gateway` container."
-        )
-
-    return {"context": context}
+    return {"context": _load_runtime_context()}
 
 
 def register(ctx):

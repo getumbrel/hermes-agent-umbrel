@@ -1,19 +1,20 @@
 #!/bin/bash
 # Enable the bundled Umbrel runtime plugin and skill directory in Hermes config.
-# This stays idempotent so web and terminal startup can both run it safely.
+# This stays idempotent so repeated container boots can run it safely.
 set -euo pipefail
 
 DATA_DIR="${HERMES_HOME:-/opt/data}"
 SKILLS_SOURCE="/app/umbrel-context/skills"
 CONFIG_FILE="${DATA_DIR}/config.yaml"
 PLUGIN_NAME="umbrel-runtime"
+HERMES_PYTHON="${HERMES_PYTHON:-/opt/hermes/.venv/bin/python}"
 
 if [[ ! -d "${DATA_DIR}" ]]; then
   echo "Umbrel context: ${DATA_DIR} does not exist; persistent data volume is not mounted" >&2
   exit 1
 fi
 
-python3 - "${CONFIG_FILE}" "${SKILLS_SOURCE}" "${PLUGIN_NAME}" <<'PY'
+"${HERMES_PYTHON}" - "${CONFIG_FILE}" "${SKILLS_SOURCE}" "${PLUGIN_NAME}" <<'PY'
 from pathlib import Path
 import re
 import sys

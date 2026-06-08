@@ -1,51 +1,31 @@
 services:
-  # Web terminal UI + dashboard (proxied through Node server)
+  # Official Hermes dashboard + messaging gateway supervised by upstream s6.
   web:
     build: .
     image: hermes-agent-umbrel:v2026.6.5
-    container_name: hermes-web
+    container_name: hermes
     hostname: hermes # Shell prompt shows "hermes@hermes" instead of "hermes@<container-id>"
     restart: unless-stopped
-    init: true
-    user: "1000:1000"
     environment:
       APP_SEED: ${APP_SEED:-dev} # Provided by umbrelOS; fallback for local dev
-      # Tells the dashboard to probe the gateway via HTTP instead of local PID detection
-      GATEWAY_HEALTH_URL: http://hermes-gateway:8642
+      HERMES_UID: "1000"
+      HERMES_GID: "1000"
+      # Enable upstream's supervised dashboard service inside the same s6 tree
+      # as the gateway, so official dashboard actions like gateway restart work.
+      HERMES_DASHBOARD: "1"
+      HERMES_DASHBOARD_HOST: "0.0.0.0"
+      HERMES_DASHBOARD_PORT: "18789"
+      # Umbrel's app proxy is the auth boundary; do not expose this raw port.
+      HERMES_DASHBOARD_INSECURE: "1"
+      # Chat still uses the official TUI, but this shim runs first-time setup
+      # automatically before handing off to upstream's bundled TUI.
+      HERMES_TUI_DIR: "/app/umbrel-tui"
+      HERMES_UPSTREAM_TUI_ENTRY: "/opt/hermes/ui-tui/dist/entry.js"
+      # Bring up the default gateway service on first boot of a fresh volume.
+      HERMES_GATEWAY_BOOTSTRAP_STATE: "running"
     ports:
-      # Expose local dev on 18790 to match the Umbrel app port; the Node server listens on 18789.
+      # Expose local dev on 18790 to match the Umbrel app port; the dashboard listens on 18789.
       - "18790:18789"
     volumes:
       - ./data:/opt/data
-    networks:
-      - hermes-net
-    depends_on:
-      - gateway
-
-  # Hermes messaging gateway
-  gateway:
-    image: hermes-agent-umbrel:v2026.6.5
-    container_name: hermes-gateway
-    restart: unless-stopped
-    entrypoint: ["/init"]
-    # Umbrel/Docker already supervises this dedicated gateway container, so opt out
-    # of Hermes' internal s6 gateway supervision and run the gateway in foreground.
-    command: ["/opt/hermes/docker/main-wrapper.sh", "gateway", "run", "--no-supervise"]
-    environment:
-      HERMES_UID: "1000"
-      HERMES_GID: "1000"
-      # API server exposes the health endpoint the dashboard probes via GATEWAY_HEALTH_URL.
-      # Must bind to 0.0.0.0 (not default 127.0.0.1) to be reachable from the web container.
-      # Binding to 0.0.0.0 requires an API key — we reuse APP_SEED since the port is
-      # internal only (not exposed to host).
-      API_SERVER_ENABLED: "true"
-      API_SERVER_HOST: "0.0.0.0"
-      API_SERVER_KEY: ${APP_SEED:-hermes-internal-key}
-    volumes:
-      - ./data:/opt/data
-    networks:
-      - hermes-net
-
-networks:
-  hermes-net:
-    driver: bridge
+    command: ["gateway", "run"]

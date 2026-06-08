@@ -20,24 +20,20 @@ When giving the user terminal commands to run themselves, explain the umbrelOS p
 
 When asking the user to edit files, explain the umbrelOS Files path first: Files -> Apps -> Hermes Agent -> data -> hermes.
 
-When asking the user to restart Hermes Agent or the gateway, prefer the umbrelOS homescreen path. On desktop, right-click the Hermes Agent app icon and choose Restart. On mobile or touch devices, press and hold the Hermes Agent app icon, then choose Restart.
+When asking the user to restart the Hermes Agent app, prefer the umbrelOS homescreen path. On desktop, right-click the Hermes Agent app icon and choose Restart. On mobile or touch devices, press and hold the Hermes Agent app icon, then choose Restart.
 
 ## Containers
 
-The Umbrel app uses two services that share `/opt/data`:
+The Umbrel app uses one container with upstream s6 supervision:
 
-- `web`: browser terminal, dashboard process, and dashboard proxy
-- `gateway`: Hermes messaging gateway
+- official dashboard service
+- official Hermes messaging gateway service
 
-Interactive chats from the Umbrel web terminal run in the `web` container. Messaging-platform chats such as Telegram run in the `gateway` container.
+Interactive chats from the dashboard chat tab and messaging-platform chats such as Telegram run inside the same app container, sharing `/opt/data`.
 
-When checking gateway health from `web`, remember that the gateway is in the separate `gateway` container. Use the internal service name `hermes-gateway` for container-to-container checks, and prefer configured health URLs over hard-coded Hermes API paths. Do not treat a missing local gateway PID, local s6 service, or `localhost` listener in `web` as proof that the gateway is down.
+The dashboard Chat tab starts with an Umbrel launch shim. If no usable model provider is configured, the shim runs `hermes setup` before handing off to the official Hermes TUI.
 
-Hermes cannot directly restart the gateway from the `web` container. The gateway is managed as a separate Umbrel/Docker service; if it needs a restart, ask the user to restart Hermes Agent using the Umbrel homescreen workflow above.
-
-Recent gateway logs under `/opt/data/logs/gateway.log` can help explain gateway failures. Treat logs as supporting diagnostics, not liveness proof; missing or stale logs do not prove the gateway is down.
-
-The dashboard and terminal are behind Umbrel's authenticated app proxy. Services started inside the container are not automatically reachable from umbrelOS or the public network; that exposure is controlled by the Umbrel app packaging/proxy.
+The dashboard is behind Umbrel's authenticated app proxy. Services started inside the container are not automatically reachable from umbrelOS or the public network; that exposure is controlled by the Umbrel app packaging/proxy.
 
 ## Updates
 
@@ -63,7 +59,6 @@ When installing tools:
 
 ## Networking
 
-- `localhost` is container-local; do not assume it reaches services running in another app container.
+- `localhost` is container-local; it reaches services in the Hermes app container, but not services in other Umbrel app containers.
 - Use the app's internal Docker service names for container-to-container traffic.
-- For gateway checks from `web`, use the internal gateway service name `hermes-gateway`, not `localhost`.
-- The dashboard runs in the `web` container and is reached through the wrapper/proxy path, not by exposing a separate host port.
+- The dashboard listens inside the container and is reached through the Umbrel app proxy, not by exposing a separate public host port.
