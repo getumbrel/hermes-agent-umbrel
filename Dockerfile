@@ -18,5 +18,16 @@ COPY umbrel-context/plugins/umbrel-runtime /opt/hermes/plugins/umbrel-runtime
 RUN /opt/hermes/.venv/bin/python /app/patch-umbrel-update-message.py && rm /app/patch-umbrel-update-message.py
 RUN chmod +x /app/bootstrap-umbrel-context.sh /app/umbrel-setup-wrapper.py /etc/cont-init.d/50-umbrel-context
 
+# Umbrel always remaps the upstream hermes user to UID/GID 1000 at container
+# boot. Bake ownership of the large runtime trees into the image so upgrades
+# do not spend several minutes chowning them before the dashboard can start.
+RUN groupmod -o -g 1000 hermes && \
+    usermod -u 1000 -g 1000 hermes && \
+    chown -R hermes:hermes \
+    /opt/hermes/.venv \
+    /opt/hermes/ui-tui \
+    /opt/hermes/gateway \
+    /opt/hermes/node_modules
+
 # Preserve the upstream /init entrypoint and command wrapper.
 EXPOSE 18789
