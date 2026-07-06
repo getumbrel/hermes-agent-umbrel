@@ -24,6 +24,8 @@ A single container uses upstream's `/init` entrypoint and s6 service tree:
 
 Both services share `/opt/data`, the persistent Hermes home. Dashboard actions such as gateway restart run inside the same s6 container and control the supervised gateway directly.
 
+The image supports `HERMES_UMBREL_APP_PROXY_AUTH=1` so the dashboard can rely on umbrelOS app-proxy authentication instead of showing Hermes' own dashboard login. Do not use this outside the Umbrel app proxy.
+
 The Chat tab uses upstream's TUI with a small Umbrel launch shim. The shim checks for a usable runtime provider before chat starts; on a fresh install it runs `hermes setup` in-place, then hands off to the official TUI.
 
 ## Umbrel context
