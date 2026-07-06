@@ -13,8 +13,10 @@ services:
       # as the gateway, so official dashboard actions like gateway restart work.
       HERMES_DASHBOARD: "1"
       HERMES_DASHBOARD_PORT: "18789"
-      # Umbrel's app proxy is the auth boundary; do not expose this raw port.
-      HERMES_DASHBOARD_INSECURE: "1"
+      # Umbrel's app proxy is the user-facing auth boundary. This env var tells
+      # our image-layer patch to avoid Hermes' own dashboard login so users do
+      # not get prompted twice. Never expose the raw container port publicly.
+      HERMES_UMBREL_APP_PROXY_AUTH: "1"
       # Chat still uses the official TUI, but this shim runs first-time setup
       # automatically before handing off to upstream's bundled TUI.
       HERMES_TUI_DIR: "/app/umbrel-tui"
@@ -23,7 +25,7 @@ services:
       HERMES_GATEWAY_BOOTSTRAP_STATE: "running"
     ports:
       # Expose local dev on 18790 to match the Umbrel app port; the dashboard listens on 18789.
-      - "18790:18789"
+      - "127.0.0.1:18790:18789"
     volumes:
       - ./data:/opt/data
     command: ["gateway", "run"]
