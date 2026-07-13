@@ -7,7 +7,8 @@ from types import SimpleNamespace
 SETUP_MODE_DESCRIPTION = (
     "Hermes needs an AI model to work.\n"
     "Quick Setup requires a Nous Portal account.\n"
-    "Full setup connects a service you already use, like OpenAI."
+    "Full setup connects a service you already use, like OpenAI.\n"
+    "Blank Slate starts with optional features turned off."
 )
 
 
@@ -19,9 +20,10 @@ def main() -> None:
     def umbrel_prompt_choice(question, choices, default=0, description=None):
         if (
             question == "How would you like to set up Hermes?"
-            and len(choices) == 2
+            and len(choices) >= 3
             and "Quick Setup" in str(choices[0])
             and "Full setup" in str(choices[1])
+            and "Blank Slate" in str(choices[2])
         ):
             # Keep upstream's choices/default intact, but provide short explicit
             # lines because the dashboard PTY truncates long curses descriptions.
