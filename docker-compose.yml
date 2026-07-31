@@ -2,7 +2,7 @@ services:
   # Official Hermes dashboard + messaging gateway supervised by upstream s6.
   web:
     build: .
-    image: hermes-agent-umbrel:v2026.7.20
+    image: hermes-agent-umbrel:v2026.7.30
     container_name: hermes
     hostname: hermes # Shell prompt shows "hermes@hermes" instead of "hermes@<container-id>"
     restart: unless-stopped
