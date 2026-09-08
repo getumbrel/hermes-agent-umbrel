@@ -1,8 +1,8 @@
 # Hermes Agent on Umbrel
 # Thin Umbrel context layer on the official Hermes Agent image
 
-# To update: docker buildx imagetools inspect nousresearch/hermes-agent:v2026.8.27
-FROM nousresearch/hermes-agent:v2026.8.27@sha256:e0df6adebddf29b91112aefc999d4aaf6846c9eb544faca5672a16a13590ff79
+# To update: docker buildx imagetools inspect nousresearch/hermes-agent:v2026.8.31
+FROM nousresearch/hermes-agent:v2026.8.31@sha256:64923faeae267792bf9bf87fe3b4c4869e35004e360c7df01730ad801b74d524
 
 USER root
 
