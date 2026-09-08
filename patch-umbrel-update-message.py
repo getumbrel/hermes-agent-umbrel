@@ -7,14 +7,8 @@ from pathlib import Path
 CONFIG_PATH = Path("/opt/hermes/hermes_cli/config.py")
 UMBREL_UPDATE_MESSAGE = "Hermes updates are managed by umbrelOS app updates."
 
-DOCKER_COMMAND_OLD = (
-    'if method == "docker":\n'
-    '        return "docker pull nousresearch/hermes-agent:latest"'
-)
-DOCKER_COMMAND_NEW = (
-    'if method == "docker":\n'
-    '        return ""'
-)
+DOCKER_COMMAND_OLD = '    "docker": "docker pull nousresearch/hermes-agent:latest",'
+DOCKER_COMMAND_NEW = '    "docker": "",'
 MESSAGE_START = '_DOCKER_UPDATE_MESSAGE = """\\\n'
 MESSAGE_END = "\n\n\ndef format_docker_update_message"
 
