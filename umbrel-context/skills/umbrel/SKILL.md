@@ -39,7 +39,7 @@ Other services started inside the container are not exposed; the app proxy only 
 
 ## Managing umbrelOS and Other Apps
 
-You can't reach umbrelOS or other Umbrel apps from this container. Use the `umbrel` MCP tools. If they aren't connected, ask the user to open Settings -> AI agents (MCP) in umbrelOS, turn it on, choose {{UMBREL_APP_NAME}}, grant the access you need, and paste the message it shows here. Add it to `/opt/data/config.yaml`, then run `/reload-mcp`:
+You can't reach umbrelOS or other Umbrel apps from this container. Use the `umbrel` MCP tools. If they aren't connected, ask the user to open Settings -> AI agents (MCP) in umbrelOS, turn it on, choose {{UMBREL_APP_NAME}}, grant the access you need, and paste the message it shows here. Add it to your config, then run `/reload-mcp`:
 
 ```yaml
 mcp_servers:
