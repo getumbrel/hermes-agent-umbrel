@@ -1,7 +1,7 @@
 ---
 name: umbrel
-description: Use when working with Hermes Agent on umbrelOS, including persistence, paths, container behavior, app updates, gateway/dashboard troubleshooting, networking, ports, or installing tools inside the app sandbox.
-version: 1.0.0
+description: Use when working with Hermes Agent on umbrelOS, including persistence, paths, container behavior, app updates, gateway/dashboard troubleshooting, networking, ports, Umbrel login, client apps that can't connect, managing umbrelOS or other Umbrel apps via the Umbrel MCP server, or installing tools inside the app sandbox.
+version: 1.1.0
 ---
 
 # Umbrel Hermes Runtime
@@ -33,7 +33,23 @@ Interactive chats from the dashboard chat tab and messaging-platform chats such 
 
 The dashboard Chat tab starts with an Umbrel launch shim. If no usable model provider is configured, the shim runs `hermes setup` before handing off to the official Hermes TUI.
 
-The dashboard is behind Umbrel's authenticated app proxy. Services started inside the container are not automatically reachable from umbrelOS or the public network; that exposure is controlled by the Umbrel app packaging/proxy.
+The dashboard is behind Umbrel's app proxy, which requires an Umbrel login by default; Hermes' own dashboard login is off because Umbrel's covers it. Users can turn it off from the umbrelOS home screen: right-click (or press and hold) the Hermes Agent icon -> Settings -> Require Umbrel login. If a client app (e.g. Hermes desktop or a mobile app) can't connect to Hermes, this login is the likely cause; suggest turning it off.
+
+Other services started inside the container are not exposed; the app proxy only forwards to the dashboard.
+
+## Managing umbrelOS and Other Apps
+
+You can't reach umbrelOS or other Umbrel apps from this container. Use the `umbrel` MCP tools. If they aren't connected, ask the user to open Settings -> AI agents (MCP) in umbrelOS, turn it on, choose Hermes Agent, grant the access you need, and paste the message it shows here. Add it to `/opt/data/config.yaml`, then run `/reload-mcp`:
+
+```yaml
+mcp_servers:
+  umbrel:
+    url: "http://10.21.0.1/mcp"
+    headers:
+      Authorization: "Bearer <token>"
+```
+
+Use `http://10.21.0.1/mcp`; `umbrel.local` doesn't resolve in the container. If a tool call is denied, ask the user to grant that access in Settings -> AI agents (MCP).
 
 ## Updates
 
