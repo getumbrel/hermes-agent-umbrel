@@ -23,6 +23,10 @@ services:
       HERMES_UPSTREAM_TUI_ENTRY: "/opt/hermes/ui-tui/dist/entry.js"
       # Bring up the default gateway service on first boot of a fresh volume.
       HERMES_GATEWAY_BOOTSTRAP_STATE: "running"
+      # Memory-provider pip deps install into HERMES_HOME/py-packages (see
+      # patch-umbrel-memory-deps.py) since /opt/hermes/.venv is read-only;
+      # this makes them importable at runtime without touching the venv.
+      PYTHONPATH: "/opt/data/py-packages"
     ports:
       # Expose local dev on 18790 to match the Umbrel app port; the dashboard listens on 18789.
       - "127.0.0.1:18790:18789"
