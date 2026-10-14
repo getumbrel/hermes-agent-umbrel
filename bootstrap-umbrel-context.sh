@@ -1,31 +1,40 @@
 #!/bin/bash
-# Enable the bundled Umbrel runtime plugin and skill directory in Hermes config.
-# This stays idempotent so repeated container boots can run it safely.
+# Enable the bundled Umbrel runtime plugin and skill directory in Hermes config
+# for every agent: the default profile ($HERMES_HOME/config.yaml) and each named
+# profile ($HERMES_HOME/profiles/<name>/config.yaml). Set HERMES_UMBREL_CONTEXT=0
+# to remove them again instead. This stays idempotent so repeated container
+# boots can run it safely.
 set -euo pipefail
 
 DATA_DIR="${HERMES_HOME:-/opt/data}"
 SKILLS_SOURCE="/app/umbrel-context/skills"
-CONFIG_FILE="${DATA_DIR}/config.yaml"
 PLUGIN_NAME="umbrel-runtime"
 HERMES_PYTHON="${HERMES_PYTHON:-/opt/hermes/.venv/bin/python}"
+UMBREL_CONTEXT_ENABLED="${HERMES_UMBREL_CONTEXT:-1}"
 
 if [[ ! -d "${DATA_DIR}" ]]; then
   echo "Umbrel context: ${DATA_DIR} does not exist; persistent data volume is not mounted" >&2
   exit 1
 fi
 
-"${HERMES_PYTHON}" - "${CONFIG_FILE}" "${SKILLS_SOURCE}" "${PLUGIN_NAME}" <<'PY'
+"${HERMES_PYTHON}" - "${DATA_DIR}" "${SKILLS_SOURCE}" "${PLUGIN_NAME}" "${UMBREL_CONTEXT_ENABLED}" <<'PY'
 from pathlib import Path
 import re
 import sys
-import yaml
 
-config_path = Path(sys.argv[1])
+try:
+    import yaml
+except ModuleNotFoundError:
+    # Hermes v0.22+ no longer ships PyYAML; its ruamel-backed shim exposes the
+    # same safe_load API and lives in /opt/hermes, which is on the venv's path.
+    import hermes_yaml as yaml
+
+data_dir = Path(sys.argv[1])
 skills_dir = sys.argv[2]
 plugin_name = sys.argv[3]
+enabled = sys.argv[4].strip().lower() not in {"0", "false", "no", "off"}
 
-text = config_path.read_text(encoding="utf-8") if config_path.exists() else ""
-lines = text.splitlines(keepends=True)
+lines = []
 
 def is_top_level_key(line: str) -> bool:
     return re.match(r"^[A-Za-z_][A-Za-z0-9_-]*:\s*(?:#.*)?$", line) is not None
@@ -182,14 +191,41 @@ def remove_child_list_item(section: str, child: str, item: str):
         if not has_items:
             lines[child_index] = f"  {child}: []\n"
 
-if Path(skills_dir).is_dir():
-    ensure_child_list_item("skills", "external_dirs", skills_dir)
-else:
-    print(f"Umbrel context: {skills_dir} not found; skill directory will be reconciled on next startup", file=sys.stderr)
+def reconcile(config_path: Path, create: bool):
+    global lines
+    if not config_path.exists() and not create:
+        return
+    text = config_path.read_text(encoding="utf-8") if config_path.exists() else ""
+    lines = text.splitlines(keepends=True)
 
-ensure_child_list_item("plugins", "enabled", plugin_name)
-remove_child_list_item("plugins", "disabled", plugin_name)
+    if enabled:
+        if Path(skills_dir).is_dir():
+            ensure_child_list_item("skills", "external_dirs", skills_dir)
+        else:
+            print(f"Umbrel context: {skills_dir} not found; skill directory will be reconciled on next startup", file=sys.stderr)
+        ensure_child_list_item("plugins", "enabled", plugin_name)
+        remove_child_list_item("plugins", "disabled", plugin_name)
+    else:
+        remove_child_list_item("skills", "external_dirs", skills_dir)
+        remove_child_list_item("plugins", "enabled", plugin_name)
 
-new_text = "".join(lines)
-config_path.write_text(new_text, encoding="utf-8")
+    new_text = "".join(lines)
+    if new_text != text or not config_path.exists():
+        config_path.write_text(new_text, encoding="utf-8")
+
+# The default agent's config is created if missing, as before.
+reconcile(data_dir / "config.yaml", create=enabled)
+
+# Every other agent is a Hermes profile with its own config.yaml. Only touch
+# profiles that already exist; skip dot-prefixed staging/tombstone dirs. One
+# broken profile must not stop the others (or the container) from starting.
+profiles_dir = data_dir / "profiles"
+if profiles_dir.is_dir():
+    for profile_dir in sorted(profiles_dir.iterdir()):
+        if profile_dir.name.startswith(".") or not profile_dir.is_dir():
+            continue
+        try:
+            reconcile(profile_dir / "config.yaml", create=False)
+        except Exception as exc:
+            print(f"Umbrel context: skipping profile {profile_dir.name}: {exc}", file=sys.stderr)
 PY

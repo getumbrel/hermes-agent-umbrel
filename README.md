@@ -32,10 +32,21 @@ The Chat tab uses upstream's TUI with a small Umbrel launch shim. The shim check
 
 The image includes a bundled `umbrel-runtime` plugin under `/opt/hermes/plugins` and a managed `umbrel` skill under `/app/umbrel-context/skills`. Both are app-owned image content, so they update with normal umbrelOS app image updates without writing managed prompt files into the user's persistent data directory.
 
-On startup, `/etc/cont-init.d/50-umbrel-context` runs `/app/bootstrap-umbrel-context.sh` idempotently:
+On startup, `/etc/cont-init.d/50-umbrel-context`:
 
-- Enables the bundled `umbrel-runtime` plugin in `/opt/data/config.yaml`, so Hermes injects compact Umbrel runtime context before LLM calls through the official `pre_llm_call` hook.
-- Adds the managed skills directory to `skills.external_dirs` in `/opt/data/config.yaml` when the config exists.
+- Renders the `umbrel` skill from its template (`/app/umbrel-context-template/skills`) into `/app/umbrel-context/skills` as root, filling in the Umbrel app name (see `UMBREL_APP_NAME` below). The rendered files stay root-owned, so the agent cannot edit them.
+- Runs `/app/bootstrap-umbrel-context.sh` as the `hermes` user, which idempotently updates the config of every agent: the default profile (`/opt/data/config.yaml`) and every existing Hermes profile (`/opt/data/profiles/<name>/config.yaml`). For each one it:
+  - Enables the bundled `umbrel-runtime` plugin, so Hermes injects compact Umbrel runtime context before LLM calls through the official `pre_llm_call` hook.
+  - Adds the managed skills directory to `skills.external_dirs`.
+
+Edits are line-based, so user comments, formatting and other plugins or skill directories are preserved, and repeated boots never add duplicates. Profiles created while the container is running pick up the Umbrel context on the next start. Dot-prefixed directories under `profiles/` and directories without a `config.yaml` are skipped; profiles are never created.
+
+The bootstrap works with both PyYAML and Hermes' own `hermes_yaml` module. Hermes v0.22.0 dropped PyYAML, which made the bootstrap fail on every start (`ModuleNotFoundError: No module named 'yaml'`), so no agent received the Umbrel context.
+
+### Environment variables
+
+- `UMBREL_APP_NAME` (default `Hermes Agent`): the name of the Umbrel app this image runs as, used wherever the agent's Umbrel guidance names the app (umbrelOS Files and Terminal paths, restarting the app, Umbrel login and MCP settings). Apps that bundle this image as their built-in Hermes set their own name, for example `UMBREL_APP_NAME=Murmur`, so the agent points users to Files -> Apps -> Murmur -> data -> hermes. It is read by the skill renderer at startup and by the `umbrel-runtime` plugin on every turn.
+- `HERMES_UMBREL_CONTEXT` (default `1`): set to `0` to opt out. The bootstrap then removes the `umbrel-runtime` plugin and the managed skills directory from every agent's config instead of adding them, leaving everything else untouched.
 
 ## License
 

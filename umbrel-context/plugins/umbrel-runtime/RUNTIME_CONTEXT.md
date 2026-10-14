@@ -1,6 +1,6 @@
 # Umbrel Runtime Context
 
-Hermes is running as an Umbrel app inside a containerized sandbox.
+Hermes is running as an Umbrel app ({{UMBREL_APP_NAME}}) inside a containerized sandbox.
 
 - `/opt/data` is the persistent Hermes home. Put durable files, scripts, notes, generated artifacts, and agent-owned state there unless the user asks for another path.
 - Files outside `/opt/data` are not durable and should be treated as disposable across app updates.

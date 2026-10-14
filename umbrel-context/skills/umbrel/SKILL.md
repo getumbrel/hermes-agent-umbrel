@@ -16,11 +16,11 @@ Files outside `/opt/data` are not durable and should be treated as disposable ac
 
 ## Umbrel User Workflows
 
-When giving the user terminal commands to run themselves, explain the umbrelOS path first: Settings -> Advanced Settings -> Terminal -> App -> Hermes Agent.
+When giving the user terminal commands to run themselves, explain the umbrelOS path first: Settings -> Advanced Settings -> Terminal -> App -> {{UMBREL_APP_NAME}}.
 
-When asking the user to edit files, explain the umbrelOS Files path first: Files -> Apps -> Hermes Agent -> data -> hermes.
+When asking the user to edit files, explain the umbrelOS Files path first: Files -> Apps -> {{UMBREL_APP_NAME}} -> data -> hermes.
 
-When asking the user to restart the Hermes Agent app, prefer the umbrelOS homescreen path. On desktop, right-click the Hermes Agent app icon and choose Restart. On mobile or touch devices, press and hold the Hermes Agent app icon, then choose Restart.
+When asking the user to restart the {{UMBREL_APP_NAME}} app, prefer the umbrelOS homescreen path. On desktop, right-click the {{UMBREL_APP_NAME}} app icon and choose Restart. On mobile or touch devices, press and hold the {{UMBREL_APP_NAME}} app icon, then choose Restart.
 
 ## Containers
 
@@ -33,13 +33,13 @@ Interactive chats from the dashboard chat tab and messaging-platform chats such 
 
 The dashboard Chat tab starts with an Umbrel launch shim. If no usable model provider is configured, the shim runs `hermes setup` before handing off to the official Hermes TUI.
 
-The dashboard is behind Umbrel's app proxy, which requires an Umbrel login by default; Hermes' own dashboard login is off because Umbrel's covers it. Users can turn it off from the umbrelOS home screen: right-click (or press and hold) the Hermes Agent icon -> Settings -> Require Umbrel login. If a client app (e.g. Hermes desktop or a mobile app) can't connect to Hermes, this login is the likely cause; suggest turning it off.
+The dashboard is behind Umbrel's app proxy, which requires an Umbrel login by default; Hermes' own dashboard login is off because Umbrel's covers it. Users can turn it off from the umbrelOS home screen: right-click (or press and hold) the {{UMBREL_APP_NAME}} icon -> Settings -> Require Umbrel login. If a client app (e.g. Hermes desktop or a mobile app) can't connect to Hermes, this login is the likely cause; suggest turning it off.
 
 Other services started inside the container are not exposed; the app proxy only forwards to the dashboard.
 
 ## Managing umbrelOS and Other Apps
 
-You can't reach umbrelOS or other Umbrel apps from this container. Use the `umbrel` MCP tools. If they aren't connected, ask the user to open Settings -> AI agents (MCP) in umbrelOS, turn it on, choose Hermes Agent, grant the access you need, and paste the message it shows here. Add it to `/opt/data/config.yaml`, then run `/reload-mcp`:
+You can't reach umbrelOS or other Umbrel apps from this container. Use the `umbrel` MCP tools. If they aren't connected, ask the user to open Settings -> AI agents (MCP) in umbrelOS, turn it on, choose {{UMBREL_APP_NAME}}, grant the access you need, and paste the message it shows here. Add it to your config, then run `/reload-mcp`:
 
 ```yaml
 mcp_servers:
