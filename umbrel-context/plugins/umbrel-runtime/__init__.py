@@ -1,14 +1,21 @@
+import os
 from pathlib import Path
 import re
 
 CONTEXT_FILE = Path(__file__).resolve().with_name("RUNTIME_CONTEXT.md")
+DEFAULT_APP_NAME = "Hermes Agent"
+
+
+def _app_name():
+    name = " ".join(os.environ.get("UMBREL_APP_NAME", "").split())
+    return name or DEFAULT_APP_NAME
 
 
 def _load_runtime_context():
     text = CONTEXT_FILE.read_text(encoding="utf-8").strip()
     if not text:
         raise RuntimeError(f"{CONTEXT_FILE} is empty")
-    return _format_context(text)
+    return _format_context(text.replace("{{UMBREL_APP_NAME}}", _app_name()))
 
 
 def _format_context(text):

@@ -4,6 +4,7 @@ const { spawnSync } = require("node:child_process");
 
 const hermesPython = process.env.HERMES_PYTHON || "/opt/hermes/.venv/bin/python";
 const upstreamEntry = process.env.HERMES_UPSTREAM_TUI_ENTRY || "/opt/hermes/ui-tui/dist/entry.js";
+const appName = (process.env.UMBREL_APP_NAME || "").trim() || "Hermes Agent";
 
 function run(command, args, options = {}) {
   return spawnSync(command, args, {
@@ -74,7 +75,7 @@ if (!providerConfigured()) {
 
   const setupStatus = exitStatus(setup);
   if (setupStatus !== 0 || !providerConfigured()) {
-    process.stdout.write("\nSetup is not complete yet. Restart Hermes Agent or open Chat again to retry.\n");
+    process.stdout.write(`\nSetup is not complete yet. Restart ${appName} or open Chat again to retry.\n`);
     process.exit(setupStatus === 0 ? 1 : setupStatus);
   }
 }
