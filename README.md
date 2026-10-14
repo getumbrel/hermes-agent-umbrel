@@ -48,6 +48,22 @@ The bootstrap works with both PyYAML and Hermes' own `hermes_yaml` module. Herme
 - `UMBREL_APP_NAME` (default `Hermes Agent`): the name of the Umbrel app this image runs as, used wherever the agent's Umbrel guidance names the app (umbrelOS Files and Terminal paths, restarting the app, Umbrel login and MCP settings). Apps that bundle this image as their built-in Hermes set their own name, for example `UMBREL_APP_NAME=Murmur`, so the agent points users to Files -> Apps -> Murmur -> data -> hermes. It is read by the skill renderer at startup and by the `umbrel-runtime` plugin on every turn.
 - `HERMES_UMBREL_CONTEXT` (default `1`): set to `0` to opt out. The bootstrap then removes the `umbrel-runtime` plugin and the managed skills directory from every agent's config instead of adding them, leaving everything else untouched.
 
+## GPU acceleration for local models
+
+Hermes can run local models with its built-in llama.cpp runtime. On Linux it installs the CUDA build for NVIDIA GPUs and the Vulkan build for Intel and AMD GPUs. This image makes those builds work on umbrelOS:
+
+- It ships the Vulkan loader (`libvulkan1`) and Mesa's Vulkan drivers (`mesa-vulkan-drivers`: Intel ANV, AMD RADV and others), about 15 MB to download and 75-85 MB on disk. Without them the Vulkan build finds no GPU and quietly runs on the CPU.
+- `/etc/cont-init.d/40-umbrel-gpu` adds the `hermes` user to the groups that own `/dev/dri/*` and `/dev/kfd`. umbrelOS grants those groups with `group_add`, but Hermes drops to `hermes` with `s6-setuidgid`, which rebuilds the supplementary groups from `/etc/group` and would otherwise drop them.
+
+The GPU only reaches the container when the Umbrel app requests it. Add the GPU permission to the app's `umbrel-app.yml`:
+
+```yaml
+permissions:
+  - GPU
+```
+
+umbrelOS then maps `/dev/dri` (and `/dev/kfd` for ROCm) with the owning host groups, and on hosts with NVIDIA's container toolkit it reserves the NVIDIA GPUs with `NVIDIA_DRIVER_CAPABILITIES=all`. The toolkit supplies NVIDIA's driver libraries, including CUDA and Vulkan, so the image does not bundle them. Apps without the permission run local models on the CPU as before.
+
 ## License
 
 MIT
