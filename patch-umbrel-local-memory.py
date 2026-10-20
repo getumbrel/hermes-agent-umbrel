@@ -4,9 +4,9 @@
 On CPU and integrated graphics (Hermes's "unified memory" budget) the managed
 llama.cpp runtime picks each model's context window against 80% of the RAM the
 machine has (MemTotal), and never narrows it to what other programs leave free:
-hardware.launch_budget() returns None for unified memory. On an Umbrel that's
-16 GB with ~3 GB free, Qwen3.5 2B launches at its native 256K window; llama.cpp
-zeroes the whole q8 KV cache up front, so the server holds ~3.6 GB before the
+hardware.launch_budget() returns None for unified memory outside Windows. On an
+Umbrel with 16 GB and ~3 GB free, Qwen3.5 2B launches at its native 256K window.
+llama.cpp zeroes the whole q8 KV cache up front, so the server holds ~3.6 GB before the
 first token and the kernel kills it (and Hermes) mid-turn.
 
 Two changes, both in hermes_cli/local_runtime/hardware.py:
@@ -14,12 +14,13 @@ Two changes, both in hermes_cli/local_runtime/hardware.py:
 1. Free RAM is read through the container's cgroup limit as well as
    /proc/meminfo, which inside Docker reports the host's memory, not the
    container's.
-2. launch_budget() answers for unified memory too: what's free now plus what
-   the outgoing server frees, less the same 20% headroom probe_budget() keeps.
+2. launch_budget() answers for Linux unified memory too: what's free now plus
+   what the outgoing server frees, less the same 20% headroom probe_budget() keeps.
    context_policy.fit_to_free_memory() then narrows the window, never below
    Hermes's 64K floor, exactly as it already does for graphics cards. The idle
    re-plan (bootstrap.refit_idle_presets) and in-session growth pick it up too,
-   so a window grows back once memory frees up.
+   so a window grows back once memory frees up. Upstream's Windows commit-memory
+   budget, introduced in v0.22.2, is preserved.
 """
 
 from pathlib import Path
@@ -94,16 +95,18 @@ LINUX_RETURN_CGROUP = """                linux_ram = _linux_ram_from_meminfo(mem
 
 # 2. A live budget for unified memory.
 UMA_NONE = """    if capacity.uma:
-        return None
-    vram = _nvidia_vram()
+        room = _windows_commit_room(model_commit_bytes(own_bytes) if own_bytes > 0 else 0)
+        if room is None:
+            return None
 """
 UMA_LIVE = """    if capacity.uma:
-        # Unified memory (CPU, integrated graphics): the window comes out of system RAM, so it is
-        # sized to what other programs leave free now, with probe_budget's headroom.
-        _total, available = _ram_bytes()
-        usable = int((available + max(0, own_bytes)) * (1 - _UMA_HEADROOM_FRACTION))
-        return replace(capacity, usable_vram_bytes=min(capacity.usable_vram_bytes, usable))
-    vram = _nvidia_vram()
+        room = _windows_commit_room(model_commit_bytes(own_bytes) if own_bytes > 0 else 0)
+        if room is None:
+            # Unified memory (CPU, integrated graphics): the window comes out of system RAM,
+            # sized to what other programs leave free now, with probe_budget's headroom.
+            _total, available = _ram_bytes()
+            usable = int((available + max(0, own_bytes)) * (1 - _UMA_HEADROOM_FRACTION))
+            return replace(capacity, usable_vram_bytes=min(capacity.usable_vram_bytes, usable))
 """
 
 
