@@ -6,7 +6,9 @@ import os
 
 
 WEB_SERVER_PATH = Path(
-    os.environ.get("HERMES_WEB_SERVER_PATH", "/opt/hermes/hermes_cli/web_server.py")
+    os.environ.get(
+        "HERMES_WEB_SERVER_PATH", "/opt/hermes/hermes_cli/web_server_boundary.py"
+    )
 )
 FUNCTION_START = "def should_require_auth(host: str, allow_public: bool = False) -> bool:"
 RETURN_LINE = "    return host not in _LOOPBACK_HOST_VALUES\n"
