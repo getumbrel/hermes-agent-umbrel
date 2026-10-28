@@ -21,3 +21,6 @@ node_modules
 # Docker
 *.log
 data
+
+# Python
+__pycache__/

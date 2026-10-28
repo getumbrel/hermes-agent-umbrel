@@ -28,6 +28,12 @@ COPY umbrel-gpu-cont-init.sh /etc/cont-init.d/40-umbrel-gpu
 COPY umbrel-context/skills /app/umbrel-context-template/skills
 RUN /opt/hermes/.venv/bin/python /app/render-umbrel-context.py
 COPY umbrel-context/plugins/umbrel-runtime /opt/hermes/plugins/umbrel-runtime
+# Email for agents, through an account's app password: a small plugin with the
+# agent's search, read, draft and send tools (sending waits for the person's
+# approval) and the routes Murmur uses to check an account. The account lives
+# in each agent's own .env; the bootstrap enables the plugin for every agent,
+# and its tools stay out of sight until an agent has an account (see its mail.py).
+COPY umbrel-context/plugins/murmur-mail /opt/hermes/plugins/murmur-mail
 RUN /opt/hermes/.venv/bin/python /app/patch-umbrel-update-message.py && rm /app/patch-umbrel-update-message.py
 # Patch only the Umbrel image layer. Upstream Hermes still requires dashboard
 # auth by default; this image can opt into trusting umbrelOS app-proxy auth.

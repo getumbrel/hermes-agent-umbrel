@@ -1,0 +1,9 @@
+{
+  "name": "murmur-mail",
+  "label": "Murmur email",
+  "description": "Lets Murmur check and show an agent's email account.",
+  "version": "1.0.0",
+  "tab": { "hidden": true },
+  "entry": "dist/index.js",
+  "api": "plugin_api.py"
+}

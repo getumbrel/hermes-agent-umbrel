@@ -1,0 +1,12 @@
+name: murmur-mail
+version: 1.0.0
+description: Lets an agent search, read and draft email in an account connected with an app password, and send it once the person approves.
+author: Umbrel
+provides_tools:
+  - email_search
+  - email_read
+  - email_draft
+  - email_send
+provides_hooks:
+  - pre_tool_call
+  - post_approval_response

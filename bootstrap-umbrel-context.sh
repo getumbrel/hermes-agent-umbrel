@@ -2,8 +2,10 @@
 # Enable the bundled Umbrel runtime plugin and skill directory in Hermes config
 # for every agent: the default profile ($HERMES_HOME/config.yaml) and each named
 # profile ($HERMES_HOME/profiles/<name>/config.yaml). Set HERMES_UMBREL_CONTEXT=0
-# to remove them again instead. This stays idempotent so repeated container
-# boots can run it safely.
+# to remove them again instead. The bundled murmur-mail plugin (email for agents
+# whose .env holds an account) is enabled the same way, on or off the Umbrel;
+# HERMES_MURMUR_MAIL=0 removes it, and an agent that disabled it keeps it off.
+# This stays idempotent so repeated container boots can run it safely.
 set -euo pipefail
 
 DATA_DIR="${HERMES_HOME:-/opt/data}"
@@ -11,13 +13,15 @@ SKILLS_SOURCE="/app/umbrel-context/skills"
 PLUGIN_NAME="umbrel-runtime"
 HERMES_PYTHON="${HERMES_PYTHON:-/opt/hermes/.venv/bin/python}"
 UMBREL_CONTEXT_ENABLED="${HERMES_UMBREL_CONTEXT:-1}"
+MAIL_PLUGIN_NAME="murmur-mail"
+MAIL_ENABLED="${HERMES_MURMUR_MAIL:-1}"
 
 if [[ ! -d "${DATA_DIR}" ]]; then
   echo "Umbrel context: ${DATA_DIR} does not exist; persistent data volume is not mounted" >&2
   exit 1
 fi
 
-"${HERMES_PYTHON}" - "${DATA_DIR}" "${SKILLS_SOURCE}" "${PLUGIN_NAME}" "${UMBREL_CONTEXT_ENABLED}" <<'PY'
+"${HERMES_PYTHON}" - "${DATA_DIR}" "${SKILLS_SOURCE}" "${PLUGIN_NAME}" "${UMBREL_CONTEXT_ENABLED}" "${MAIL_PLUGIN_NAME}" "${MAIL_ENABLED}" <<'PY'
 from pathlib import Path
 import re
 import sys
@@ -33,6 +37,8 @@ data_dir = Path(sys.argv[1])
 skills_dir = sys.argv[2]
 plugin_name = sys.argv[3]
 enabled = sys.argv[4].strip().lower() not in {"0", "false", "no", "off"}
+mail_plugin = sys.argv[5]
+mail_enabled = sys.argv[6].strip().lower() not in {"0", "false", "no", "off"}
 
 lines = []
 
@@ -191,6 +197,15 @@ def remove_child_list_item(section: str, child: str, item: str):
         if not has_items:
             lines[child_index] = f"  {child}: []\n"
 
+def disabled_plugins(text: str) -> set:
+    try:
+        config = yaml.safe_load(text) or {}
+    except Exception:
+        return set()
+    plugins = config.get("plugins") if isinstance(config, dict) else None
+    disabled = plugins.get("disabled") if isinstance(plugins, dict) else None
+    return {str(name) for name in disabled} if isinstance(disabled, list) else set()
+
 def reconcile(config_path: Path, create: bool):
     global lines
     if not config_path.exists() and not create:
@@ -209,12 +224,17 @@ def reconcile(config_path: Path, create: bool):
         remove_child_list_item("skills", "external_dirs", skills_dir)
         remove_child_list_item("plugins", "enabled", plugin_name)
 
+    if not mail_enabled:
+        remove_child_list_item("plugins", "enabled", mail_plugin)
+    elif mail_plugin not in disabled_plugins(text):
+        ensure_child_list_item("plugins", "enabled", mail_plugin)
+
     new_text = "".join(lines)
     if new_text != text or not config_path.exists():
         config_path.write_text(new_text, encoding="utf-8")
 
 # The default agent's config is created if missing, as before.
-reconcile(data_dir / "config.yaml", create=enabled)
+reconcile(data_dir / "config.yaml", create=enabled or mail_enabled)
 
 # Every other agent is a Hermes profile with its own config.yaml. Only touch
 # profiles that already exist; skip dot-prefixed staging/tombstone dirs. One
