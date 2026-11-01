@@ -1,0 +1,9 @@
+{
+  "name": "murmur-voice",
+  "label": "Murmur voice",
+  "description": "Lets Murmur set up local voices, and hold live voice calls on a ChatGPT plan.",
+  "version": "2.0.0",
+  "tab": { "hidden": true },
+  "entry": "dist/index.js",
+  "api": "plugin_api.py"
+}

@@ -1,0 +1,257 @@
+{
+ "packs": {
+  "matcha-zh-en": {
+   "archive": {
+    "sha256": "271b804af570400d3bcdcb53bf6e53cc9f75180ee763b9f13eb5eaf2b0d086ef",
+    "size": 79033838,
+    "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/matcha-icefall-zh-en.tar.bz2"
+   },
+   "files": [
+    {
+     "path": "vocos-16khz-univ.onnx",
+     "sha256": "b599142a1fb8ff03de3e84ac35ff537c619e56f4267a6fe894851a42844acf9e",
+     "size": 53882848,
+     "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/vocoder-models/vocos-16khz-univ.onnx"
+    }
+   ],
+   "keep": [
+    "model-steps-3.onnx",
+    "lexicon.txt",
+    "tokens.txt",
+    "date-zh.fst",
+    "number-zh.fst",
+    "phone-zh.fst",
+    "espeak-ng-data/"
+   ],
+   "size": 132916686
+  },
+  "pocket-tts-18m": {
+   "extra": {
+    "config": "english_18m_2026-10",
+    "tokenizer": "tokenizer.model",
+    "voice": "alba"
+   },
+   "files": [
+    {
+     "path": "model.safetensors",
+     "sha256": "599329dcea2f2a8d17b575e1c6e11b78822453c9073040d55c26faadf4883188",
+     "size": 111728528,
+     "url": "https://huggingface.co/kyutai/pocket-tts-without-voice-cloning/resolve/a7056f505a4a8ca72d8b5fb1440071d6f1a35739/languages/english_18m_2026-10/model.safetensors"
+    },
+    {
+     "path": "tokenizer.model",
+     "sha256": "d461765ae179566678c93091c5fa6f2984c31bbe990bf1aa62d92c64d91bc3f6",
+     "size": 59339,
+     "url": "https://huggingface.co/kyutai/pocket-tts-without-voice-cloning/resolve/08ffc58775e62aad9409511b9591c9af626270f3/languages/english_18m_2026-10/tokenizer.model"
+    },
+    {
+     "path": "alba.safetensors",
+     "sha256": "11554cbe9f3d3a3e10722932df9952bb44928e534f7af3200524659166b5627a",
+     "size": 4163992,
+     "url": "https://huggingface.co/kyutai/pocket-tts-without-voice-cloning/resolve/a7056f505a4a8ca72d8b5fb1440071d6f1a35739/languages/english_18m_2026-10/embeddings/alba.safetensors"
+    }
+   ],
+   "size": 115951859
+  },
+  "x-asr": {
+   "files": [
+    {
+     "path": "encoder-epoch-99-avg-1.int8.onnx",
+     "sha256": "fe0198b52626f2a1012ebb6d6a7259c5137c4c964f3a524135e353f4687b5d14",
+     "size": 161744450,
+     "url": "https://huggingface.co/csukuangfj2/sherpa-onnx-x-asr-zipformer-transducer-zh-en-punct-int8-2026-06-03/resolve/ce812cc05d858539a68dd42e86f4fd7a9ce1acf0/encoder-epoch-99-avg-1.int8.onnx"
+    },
+    {
+     "path": "decoder-epoch-99-avg-1.onnx",
+     "sha256": "a9fe7c320337e6f510809c028a8accf074d45f42aab852e2d29830babc41a3f9",
+     "size": 11309084,
+     "url": "https://huggingface.co/csukuangfj2/sherpa-onnx-x-asr-zipformer-transducer-zh-en-punct-int8-2026-06-03/resolve/ce812cc05d858539a68dd42e86f4fd7a9ce1acf0/decoder-epoch-99-avg-1.onnx"
+    },
+    {
+     "path": "joiner-epoch-99-avg-1.int8.onnx",
+     "sha256": "aedb7fa697b2ab43f20499826fff7c997eea7d67db77be97769aeeeb726e63b3",
+     "size": 2581422,
+     "url": "https://huggingface.co/csukuangfj2/sherpa-onnx-x-asr-zipformer-transducer-zh-en-punct-int8-2026-06-03/resolve/ce812cc05d858539a68dd42e86f4fd7a9ce1acf0/joiner-epoch-99-avg-1.int8.onnx"
+    },
+    {
+     "path": "tokens.txt",
+     "sha256": "b818a60878b9aae978cbb8ad594acbd403d76d1af2e31ef4197c84e2dbdba27c",
+     "size": 58806,
+     "url": "https://huggingface.co/csukuangfj2/sherpa-onnx-x-asr-zipformer-transducer-zh-en-punct-int8-2026-06-03/resolve/ce812cc05d858539a68dd42e86f4fd7a9ce1acf0/tokens.txt"
+    }
+   ],
+   "size": 175693762
+  }
+ },
+ "python": "3.14",
+ "runtimes": {
+  "pocket": {
+   "aarch64": [
+    {
+     "name": "einops-0.8.2-py3-none-any.whl",
+     "sha256": "54058201ac7087911181bfec4af6091bb59380360f069276601256a76af08193",
+     "size": 65638,
+     "url": "https://files.pythonhosted.org/packages/2a/09/f8d8f8f31e4483c10a906437b4ce31bdf3d6d417b73fe33f1a8b59e34228/einops-0.8.2-py3-none-any.whl"
+    },
+    {
+     "name": "mpmath-1.3.0-py3-none-any.whl",
+     "sha256": "a0b2b9fe80bbcd81a6647ff13108738cfb482d481d826cc0e02f5b35e5c88d2c",
+     "size": 536198,
+     "url": "https://files.pythonhosted.org/packages/43/e3/7d92a15f894aa0c9c4b49b8ee9ac9850d6e63b03c9c32c0367a13ae62209/mpmath-1.3.0-py3-none-any.whl"
+    },
+    {
+     "name": "networkx-3.7-py3-none-any.whl",
+     "sha256": "e3fd2c13a7814cee3746340d8d7f8598a67f16a58bf47fb7f8793fab6efca1b0",
+     "size": 2142205,
+     "url": "https://files.pythonhosted.org/packages/7e/cd/fe58041e9011f307c490e3e17dd48cc516448f7c698a3f2d9d9d65d7e6a8/networkx-3.7-py3-none-any.whl"
+    },
+    {
+     "name": "pocket_tts-4.0.1-py3-none-any.whl",
+     "sha256": "a6baf5fd9195399a632d7ef1cb75d4ee772b8d3534c85b90164b39c687a69961",
+     "size": 100708,
+     "url": "https://files.pythonhosted.org/packages/6c/33/e95df6d67fac720836b8240cb2512a253c0e64da85b9c485df31aad0ce71/pocket_tts-4.0.1-py3-none-any.whl"
+    },
+    {
+     "name": "safetensors-0.8.0-cp310-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl",
+     "sha256": "7a46e5ff292c356d6991e60942ba7f79817682d3a2cef0702136448cb9c4d235",
+     "size": 502844,
+     "url": "https://files.pythonhosted.org/packages/09/7d/65a7de0af421317bb36a067241e4235fff194eed60b961ed6d3f59a3fc60/safetensors-0.8.0-cp310-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl"
+    },
+    {
+     "name": "scipy-1.18.1-cp314-cp314-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl",
+     "sha256": "2d3ab0e8c69a17dd3559eab8cbb88f258e285c94d572c2719033f90f83290c89",
+     "size": 34053851,
+     "url": "https://files.pythonhosted.org/packages/0b/56/030af62bea3cf878e0028515dff78c123b01633606a879b63f42d2db99cc/scipy-1.18.1-cp314-cp314-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl"
+    },
+    {
+     "name": "sentencepiece-0.2.2-cp314-cp314-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl",
+     "sha256": "1402d8ee36f0d851cea8eee4dbb85fea14643b7503cf4d00d102eec0fe3ca719",
+     "size": 1325463,
+     "url": "https://files.pythonhosted.org/packages/10/ca/1b6c251321901cbf8a2d2e48b8b70eb82a449011b766af52a228d0a90b6b/sentencepiece-0.2.2-cp314-cp314-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl"
+    },
+    {
+     "name": "shellingham-1.5.4-py2.py3-none-any.whl",
+     "sha256": "7ecfff8f2fd72616f7481040475a65b2bf8af90a56c89140852d1120324e8686",
+     "size": 9755,
+     "url": "https://files.pythonhosted.org/packages/e0/f9/0595336914c5619e5f28a1fb793285925a8cd4b432c9da0a987836c7f822/shellingham-1.5.4-py2.py3-none-any.whl"
+    },
+    {
+     "name": "sympy-1.14.0-py3-none-any.whl",
+     "sha256": "e091cc3e99d2141a0ba2847328f5479b05d94a6635cb96148ccb3f34671bd8f5",
+     "size": 6299353,
+     "url": "https://files.pythonhosted.org/packages/a2/09/77d55d46fd61b4a135c444fc97158ef34a095e5681d0a6c10b75bf356191/sympy-1.14.0-py3-none-any.whl"
+    },
+    {
+     "name": "torch-2.14.1+cpu-cp314-cp314-manylinux_2_28_aarch64.whl",
+     "sha256": "f56cd23a3bf003bfbed3da0645ba09b3ccc66c0a2f2ac726a9b98f34e0e4926f",
+     "size": 159263447,
+     "url": "https://download-r2.pytorch.org/whl/cpu/torch-2.14.1%2Bcpu-cp314-cp314-manylinux_2_28_aarch64.whl"
+    },
+    {
+     "name": "typer-0.27.3-py3-none-any.whl",
+     "sha256": "e50022f28b82a86313e54501317a1db64bf8f8d036ff8cfe5ca7e47675454aff",
+     "size": 123312,
+     "url": "https://files.pythonhosted.org/packages/07/ea/2e31b67051e91a133189e9c000c222502ddc6969856416de0d095de4c0b0/typer-0.27.3-py3-none-any.whl"
+    }
+   ],
+   "x86_64": [
+    {
+     "name": "einops-0.8.2-py3-none-any.whl",
+     "sha256": "54058201ac7087911181bfec4af6091bb59380360f069276601256a76af08193",
+     "size": 65638,
+     "url": "https://files.pythonhosted.org/packages/2a/09/f8d8f8f31e4483c10a906437b4ce31bdf3d6d417b73fe33f1a8b59e34228/einops-0.8.2-py3-none-any.whl"
+    },
+    {
+     "name": "mpmath-1.3.0-py3-none-any.whl",
+     "sha256": "a0b2b9fe80bbcd81a6647ff13108738cfb482d481d826cc0e02f5b35e5c88d2c",
+     "size": 536198,
+     "url": "https://files.pythonhosted.org/packages/43/e3/7d92a15f894aa0c9c4b49b8ee9ac9850d6e63b03c9c32c0367a13ae62209/mpmath-1.3.0-py3-none-any.whl"
+    },
+    {
+     "name": "networkx-3.7-py3-none-any.whl",
+     "sha256": "e3fd2c13a7814cee3746340d8d7f8598a67f16a58bf47fb7f8793fab6efca1b0",
+     "size": 2142205,
+     "url": "https://files.pythonhosted.org/packages/7e/cd/fe58041e9011f307c490e3e17dd48cc516448f7c698a3f2d9d9d65d7e6a8/networkx-3.7-py3-none-any.whl"
+    },
+    {
+     "name": "pocket_tts-4.0.1-py3-none-any.whl",
+     "sha256": "a6baf5fd9195399a632d7ef1cb75d4ee772b8d3534c85b90164b39c687a69961",
+     "size": 100708,
+     "url": "https://files.pythonhosted.org/packages/6c/33/e95df6d67fac720836b8240cb2512a253c0e64da85b9c485df31aad0ce71/pocket_tts-4.0.1-py3-none-any.whl"
+    },
+    {
+     "name": "safetensors-0.8.0-cp310-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+     "sha256": "fd6f3f93c9a0a7cc2788ee63fb763353d4bd2e89b0751bc78fcf7dda00bea774",
+     "size": 516040,
+     "url": "https://files.pythonhosted.org/packages/28/50/f203ff3a3ddfe19308efc83c5a3a29ed02bf786732ec35e68bf9162f3365/safetensors-0.8.0-cp310-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl"
+    },
+    {
+     "name": "scipy-1.18.1-cp314-cp314-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+     "sha256": "ac0333bdf38309aa3dcbe7e3fa7ea29e7a2c37c6ea306a757b700ded8e4596ad",
+     "size": 35329183,
+     "url": "https://files.pythonhosted.org/packages/6b/89/2a844506d49651e9aa1af6ef95b6bd8031cb1d5a4375edec6155037e04cf/scipy-1.18.1-cp314-cp314-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl"
+    },
+    {
+     "name": "sentencepiece-0.2.2-cp314-cp314-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+     "sha256": "8d44b20234905ff022b7d535f79d1f823ad7670c9851cc4f03cdc34787cdb3ab",
+     "size": 1398138,
+     "url": "https://files.pythonhosted.org/packages/24/b3/718847349da7b25c8220ed86d85b89080af94740b2d87a59198104ae5c51/sentencepiece-0.2.2-cp314-cp314-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl"
+    },
+    {
+     "name": "shellingham-1.5.4-py2.py3-none-any.whl",
+     "sha256": "7ecfff8f2fd72616f7481040475a65b2bf8af90a56c89140852d1120324e8686",
+     "size": 9755,
+     "url": "https://files.pythonhosted.org/packages/e0/f9/0595336914c5619e5f28a1fb793285925a8cd4b432c9da0a987836c7f822/shellingham-1.5.4-py2.py3-none-any.whl"
+    },
+    {
+     "name": "sympy-1.14.0-py3-none-any.whl",
+     "sha256": "e091cc3e99d2141a0ba2847328f5479b05d94a6635cb96148ccb3f34671bd8f5",
+     "size": 6299353,
+     "url": "https://files.pythonhosted.org/packages/a2/09/77d55d46fd61b4a135c444fc97158ef34a095e5681d0a6c10b75bf356191/sympy-1.14.0-py3-none-any.whl"
+    },
+    {
+     "name": "torch-2.14.1+cpu-cp314-cp314-manylinux_2_28_x86_64.whl",
+     "sha256": "35103e180214793207f95d7e12e100ecba3ace6f5fb37e1fcefbb07e096ed180",
+     "size": 196260555,
+     "url": "https://download-r2.pytorch.org/whl/cpu/torch-2.14.1%2Bcpu-cp314-cp314-manylinux_2_28_x86_64.whl"
+    },
+    {
+     "name": "typer-0.27.3-py3-none-any.whl",
+     "sha256": "e50022f28b82a86313e54501317a1db64bf8f8d036ff8cfe5ca7e47675454aff",
+     "size": 123312,
+     "url": "https://files.pythonhosted.org/packages/07/ea/2e31b67051e91a133189e9c000c222502ddc6969856416de0d095de4c0b0/typer-0.27.3-py3-none-any.whl"
+    }
+   ]
+  },
+  "sherpa": {
+   "aarch64": [
+    {
+     "name": "sherpa_onnx_core-1.13.8-py3-none-manylinux2014_aarch64.whl",
+     "sha256": "a51a03d55c376c32e15dd63ea852236042ba91a5cd73e253bbf7cf21f6582ba9",
+     "size": 13353426,
+     "url": "https://files.pythonhosted.org/packages/9c/72/02227b14cd3fb3d504a8814ad144ed321a53331948c893821e02f4abb1d7/sherpa_onnx_core-1.13.8-py3-none-manylinux2014_aarch64.whl"
+    },
+    {
+     "name": "sherpa_onnx-1.13.8-cp314-cp314-manylinux2014_aarch64.manylinux_2_17_aarch64.whl",
+     "sha256": "45f16c9fabc3d7ce31ba9722ff8196627ddcaa5ffd02413ad0664ad1952ba419",
+     "size": 4182835,
+     "url": "https://files.pythonhosted.org/packages/4f/9a/51821829b5735b3d7ce607992a62fe93d5f7215cda324c11191c77d49b9b/sherpa_onnx-1.13.8-cp314-cp314-manylinux2014_aarch64.manylinux_2_17_aarch64.whl"
+    }
+   ],
+   "x86_64": [
+    {
+     "name": "sherpa_onnx_core-1.13.8-py3-none-manylinux2014_x86_64.whl",
+     "sha256": "4da90acf435373d7b2ba9cc0be806e7e274d28f63f5780880b5dea6721626e36",
+     "size": 10642497,
+     "url": "https://files.pythonhosted.org/packages/b6/ca/e27c1fb5c54b181d4a5450f3d5c789d9da02eb42dc9b20cfdab5dda4c864/sherpa_onnx_core-1.13.8-py3-none-manylinux2014_x86_64.whl"
+    },
+    {
+     "name": "sherpa_onnx-1.13.8-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+     "sha256": "97309e4b5d9850490085da61e35b0fca002a39ec9da93cd9e21d2d0dcc1cc62a",
+     "size": 4403669,
+     "url": "https://files.pythonhosted.org/packages/2d/e2/b1af63c1f6a9e0025cbc9aa3b1814ba97ede63db0ad9f297bb9f268fdfc2/sherpa_onnx-1.13.8-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.whl"
+    }
+   ]
+  }
+ }
+}

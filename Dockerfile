@@ -15,6 +15,28 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends libvulkan1 mesa-vulkan-drivers && \
     rm -rf /var/lib/apt/lists/*
 
+# Voice out of the box: bake Hermes' own [voice] extra (faster-whisper, the
+# "Local Whisper" speech-to-text provider), [piper] extra (Piper text to speech)
+# and [tts-premium] extra (ElevenLabs' SDK, which its voices can't speak
+# without) into the image's environment. Installed on demand, each lands in a
+# new copy of the whole environment under /opt/data and only loads after a
+# restart. Add exactly the versions Hermes' uv.lock pins, with Hermes' own uv,
+# leaving everything upstream baked untouched. Then record them in the shipped
+# selection like upstream's --record-selection, so later on-demand installs
+# keep them. Models aren't baked: Hermes downloads the Whisper model and Piper
+# voice into /opt/data on first use.
+RUN set -eu; \
+    uv="$(python3 -c 'import pm; print(pm.uv_launcher("uv"))')"; \
+    UV_PROJECT_ENVIRONMENT=/opt/hermes/.venv "$uv" sync --frozen --inexact --no-cache \
+        --compile-bytecode --no-install-project --python /opt/hermes/.venv/bin/python \
+        --extra voice --extra piper --extra tts-premium; \
+    python3 -c 'from pathlib import Path; from pm.build_env import _record_selection; \
+        from pm.lock import Facts; from pm.paths import facts_path; \
+        shipped = Facts(facts_path()).get("venv")["extras"]; \
+        _record_selection(Path("/opt/hermes"), [*shipped, "voice", "piper", "tts-premium"])'; \
+    chmod 0644 /opt/hermes/tools/facts.json; \
+    rm -f /opt/hermes/.venv/.lock
+
 # Bundle Umbrel-managed context in the image. Hermes enables the runtime plugin
 # and external skill directory from config.yaml at startup; the files themselves
 # stay outside /opt/data so the agent cannot edit managed instructions.
@@ -28,6 +50,13 @@ COPY umbrel-gpu-cont-init.sh /etc/cont-init.d/40-umbrel-gpu
 COPY umbrel-context/skills /app/umbrel-context-template/skills
 RUN /opt/hermes/.venv/bin/python /app/render-umbrel-context.py
 COPY umbrel-context/plugins/umbrel-runtime /opt/hermes/plugins/umbrel-runtime
+# Voice for agents: Hermes's `murmur` speech providers, which use one pair of
+# models per language (English and Chinese, downloaded into /opt/data on first
+# use, pinned by sha256) and the baked-in Whisper and Piper until then and in
+# every other language; and Murmur's voice calls on an agent's ChatGPT plan, which
+# keep the ChatGPT sign-in inside Hermes. A bundled backend plugin, so it loads
+# for every agent by itself (see its README section).
+COPY umbrel-context/plugins/murmur-voice /opt/hermes/plugins/murmur-voice
 # Email for agents, through an account's app password: a small plugin with the
 # agent's search, read, draft and send tools (sending waits for the person's
 # approval) and the routes Murmur uses to check an account. The account lives

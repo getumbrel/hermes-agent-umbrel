@@ -1,0 +1,7 @@
+name: murmur-voice
+version: 2.0.0
+description: Local voices for English and Chinese (Pocket TTS, Matcha, X-ASR), downloaded on demand, with Hermes's own Piper and Whisper until they're ready; and Murmur's voice calls on a ChatGPT plan.
+author: Umbrel
+# A backend for Hermes's own text-to-speech and speech-to-text: bundled backends load by themselves,
+# and an agent picks it with tts.provider / stt.provider: murmur.
+kind: backend
