@@ -37,6 +37,21 @@ RUN set -eu; \
     chmod 0644 /opt/hermes/tools/facts.json; \
     rm -f /opt/hermes/.venv/.lock
 
+# The screen the agent's browser runs on (Hermes's Bot Screen), so a person can
+# watch it live and take over for a CAPTCHA or a login. The packages are
+# Hermes's own list (tools/bot_desktop/runtime.py), without the second Chromium
+# its -desktop tags add: the browser stays Hermes's pinned one. Nothing runs
+# until an agent's browser opens on it, and it stops when idle. Plus emoji and
+# Chinese, Japanese and Korean fonts (WenQuanYi Micro Hei: 5 MB, where Noto's
+# are 93 MB), so pages, and the 🐴 Browser Use puts on the agent's tab, don't
+# show empty boxes (in the agent's screenshots too).
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+      tigervnc-standalone-server xfce4-panel xfwm4 xfdesktop4 xfce4-settings xfce4-terminal \
+      dbus-x11 x11-xserver-utils x11-utils x11-xkb-utils xauth fonts-dejavu-core \
+      fonts-noto-color-emoji fonts-wqy-microhei && \
+    rm -rf /var/lib/apt/lists/*
+
 # Bundle Umbrel-managed context in the image. Hermes enables the runtime plugin
 # and external skill directory from config.yaml at startup; the files themselves
 # stay outside /opt/data so the agent cannot edit managed instructions.
@@ -63,6 +78,11 @@ COPY umbrel-context/plugins/murmur-voice /opt/hermes/plugins/murmur-voice
 # in each agent's own .env; the bootstrap enables the plugin for every agent,
 # and its tools stay out of sight until an agent has an account (see its mail.py).
 COPY umbrel-context/plugins/murmur-mail /opt/hermes/plugins/murmur-mail
+# Lets an agent ask the person to take over its browser for a step only they
+# can do, and wait until they hand it back, and opens the browser maximized on
+# the screen (headless off it). Murmur switches it on for an agent along with
+# its browser's screen, and adds it to a Hermes without it.
+COPY umbrel-context/plugins/murmur-screen /opt/hermes/plugins/murmur-screen
 RUN /opt/hermes/.venv/bin/python /app/patch-umbrel-update-message.py && rm /app/patch-umbrel-update-message.py
 # Patch only the Umbrel image layer. Upstream Hermes still requires dashboard
 # auth by default; this image can opt into trusting umbrelOS app-proxy auth.

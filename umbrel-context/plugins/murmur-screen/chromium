@@ -1,0 +1,46 @@
+#!/bin/sh
+# The agent's browser, as murmur-screen opens it: the plugin points Hermes's
+# AGENT_BROWSER_EXECUTABLE_PATH here and the browser it pointed at before in
+# MURMUR_SCREEN_BROWSER, so every Hermes gets the same window, on Umbrel's
+# image or not.
+#
+# With a screen (DISPLAY is set) it opens there maximized, for the person to
+# watch and take over; the window follows the screen when a phone reshapes it.
+# A screen that has just started is given time for its window manager to come
+# up and say its name: Chromium draws its own frame, with no title bar, only
+# for a window manager it knows by name as it opens. A browser that didn't close cleanly comes back without its old
+# tabs or an offer to restore them, so the page in front is always the one the
+# agent is working on (sign-ins stay).
+#
+# On the agent's own screen (its desktop keeps its settings under Hermes's
+# bot-desktop folder) the window has no minimize, maximize or close buttons:
+# Chromium draws them itself, from the desktop's layout as it opens, and on
+# that screen they could only hide or close the agent's browser. A person's own
+# desktop is left as it is.
+#
+# With none (the screen is off, or couldn't start) it runs headless as it
+# always has, so the agent's browser never depends on the screen.
+#
+# --test-type and --disable-infobars hide Chrome for Testing's "only for
+# automated testing" bar.
+if [ -n "${DISPLAY:-}" ]; then
+  named() {
+    wm=$(xprop -root _NET_SUPPORTING_WM_CHECK 2>/dev/null | sed -n 's/.*window id # //p')
+    [ -n "$wm" ] && xprop -id "$wm" _NET_WM_NAME 2>/dev/null | grep -q '"'
+  }
+  i=0
+  until named || [ "$i" -ge 100 ]; do
+    sleep 0.1
+    i=$((i + 1))
+  done
+  case ${XDG_CONFIG_HOME:-} in
+    */bot-desktop/*) xfconf-query -c xsettings -p /Gtk/DecorationLayout -n -t string -s menu: 2>/dev/null ;;
+  esac
+  for arg; do
+    case $arg in --user-data-dir=*) rm -rf "${arg#*=}/Default/Sessions" ;; esac
+  done
+  set -- --start-maximized --hide-crash-restore-bubble "$@"
+else
+  set -- --headless=new "$@"
+fi
+exec "$MURMUR_SCREEN_BROWSER" --test-type --disable-infobars "$@"
