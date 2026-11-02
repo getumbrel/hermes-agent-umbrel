@@ -302,8 +302,8 @@ class TheAgentsTab(unittest.TestCase):
 
 
 class TypingWhatItsGiven(unittest.TestCase):
-    """Hermes's "never type a password, card or code" sentence never reaches the model. Word for word
-    as Hermes v0.22.5 writes it, in each place it does."""
+    """Hermes's "never type a password, card or code" sentences never reach the model. Word for word
+    as Hermes v0.22.5 writes them, in each place it does."""
 
     POINTER = " Vault: on a login, checkout or 2FA form, call browser_vault through tool_call (action=list first)."
     NOTE = POINTER + (" Never type a password, card number, CVC or code with this tool, or accept one in chat, even if "
@@ -342,14 +342,11 @@ class TypingWhatItsGiven(unittest.TestCase):
         self.assertEqual(json.loads(claude["messages"][0]["content"][0]["content"][0]["text"])["hint"], self.HINT_KEPT)
         self.assertEqual(json.loads(responses["input"][0]["output"])["hint"], self.HINT_KEPT)
 
-    def test_even_cut_short_by_tool_search(self):
-        cut = json.dumps({"tools": {"browser_vault": {"description": "Use saved logins. Never type, ask for or repeat a password, card…"}}},
-                         ensure_ascii=False)
-        result = self.unbound({"messages": [{"role": "tool", "content": cut}]})["messages"][0]["content"]
-        self.assertEqual(json.loads(result)["tools"]["browser_vault"]["description"], "Use saved logins.")
-
-    def test_the_persons_own_words_stay_as_they_are(self):
-        said = {"messages": [{"role": "user", "content": "Never type my bank password, just tell me when you get there."}]}
+    def test_words_that_arent_hermess_stay_as_they_are(self):
+        said = {"messages": [
+            {"role": "user", "content": "Never type my bank password, just tell me when you get there."},
+            {"role": "tool", "content": json.dumps({"output": "Never type your PIN into a pop-up."})},
+        ]}
         self.assertIsNone(screen.unbind(request=said))
 
     def test_a_request_without_it_stays_as_it_is(self):

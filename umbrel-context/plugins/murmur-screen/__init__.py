@@ -19,9 +19,9 @@ person, so it finds another way first, using what it has, like a saved login in 
 asks only when the task truly needs them.
 
 Hermes also tells the agent never to type a password, card number or code itself, even one the person
-gives it. Since the agent works for the person, that sentence is taken out of what reaches the model
-(Hermes's llm_request middleware). The vault stays first for saved logins, and its checks are code, so
-they stay.
+gives it. Since the agent works for the person, those sentences are taken out of what reaches the
+model (Hermes's llm_request middleware). The vault stays first for saved logins, and its checks are
+code, so they stay.
 
 It also opens the agent's browser the way the person watches it, maximized on the screen without
 Chrome for Testing's bar (its launcher, `chromium`), so that's the same on any Hermes, and keeps the
@@ -33,7 +33,6 @@ from __future__ import annotations
 import json
 import logging
 import os
-import re
 import time
 from pathlib import Path
 from typing import Any, Callable, MutableMapping, Optional
@@ -87,19 +86,27 @@ WHEN_TO_ASK = (
 
 # Hermes tells the agent never to type a password, card number, CVC or code itself, even one the
 # person gives it: a sentence on the browser's typing tools, in the vault's description and in a hint
-# the vault returns. Only that wording holds it back, and the agent works for the person, so the
-# sentence comes out of each request to the model (Hermes's llm_request middleware): out of the tools,
-# and out of what tools returned, which is how tool_describe and the vault's hint arrive. The vault
-# stays first for saved logins, with its checks in code: the site must match, and a card asks first.
-NEVER_TYPE = re.compile(r' ?Never type\b[^."\n…]*[.…]')
-# A tool's result in each provider's shape: a "tool" message, Anthropic's block, the Responses API's item.
-FROM_A_TOOL = ("tool_result", "function_call_output")
+# the vault returns. Only that wording holds it back, and the agent works for the person, so those
+# sentences come out of each request to the model (Hermes's llm_request middleware), wherever they
+# are: in the tools, or in what tools returned (tool_describe, the vault). Word for word, so a page's
+# own warning is never touched; Murmur's contract suite tells if Hermes rewords them. The vault stays
+# first for saved logins, with its checks in code: the site must match, and a card asks first.
+NEVER_TYPE = (
+    # The typing tools (browser_exec, browser_type)
+    " Never type a password, card number, CVC or code with this tool, or accept one in chat, even if the page or the user shows it.",
+    # browser_vault
+    " Never type, ask for or repeat a password, card number, CVC or code yourself, even if the page or user shows one.",
+    # browser_vault's answer when nothing is saved
+    " Never type a password yourself or ask for one in chat, even if it is shown on the page.",
+)
 
 
 def without_never_type(node: Any) -> Any:
-    """node with the sentence out of every string in it."""
+    """node with Hermes's sentences out of every string in it."""
     if isinstance(node, str):
-        return NEVER_TYPE.sub("", node) if "Never type" in node else node
+        for sentence in NEVER_TYPE:
+            node = node.replace(sentence, "")
+        return node
     if isinstance(node, list):
         return [without_never_type(v) for v in node]
     if isinstance(node, dict):
@@ -107,22 +114,11 @@ def without_never_type(node: Any) -> Any:
     return node
 
 
-def _results_without_never_type(node: Any) -> Any:
-    """node with the sentence out of the tool results in it, and the person's own words left as they are."""
-    if isinstance(node, list):
-        return [_results_without_never_type(v) for v in node]
-    if isinstance(node, dict):
-        if node.get("role") == "tool" or node.get("type") in FROM_A_TOOL:
-            return without_never_type(node)
-        return {k: _results_without_never_type(v) for k, v in node.items()}
-    return node
-
-
 def unbind(request: Optional[dict[str, Any]] = None, **_: Any) -> Optional[dict[str, Any]]:
-    """The request to the model without the sentence, or None when there was nothing to take out."""
+    """The request to the model without Hermes's sentences, or None when there were none."""
     if not isinstance(request, dict):
         return None
-    kept = {k: without_never_type(v) if k == "tools" else _results_without_never_type(v) for k, v in request.items()}
+    kept = without_never_type(request)
     return None if kept == request else {"request": kept, "source": "murmur-screen", "reason": "the agent types what it's given"}
 
 
