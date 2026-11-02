@@ -46,11 +46,9 @@ SCHEMA = {
     "name": TOOL,
     # The first sentence is what Hermes's tool search lists, so it says it all.
     "description": (
-        "Ask the person to take over your browser. For a step only they can do: a CAPTCHA or "
-        "\"are you human\" check, signing in, a one-time code, or confirming a payment. They see your "
-        "browser live, take it over, and hand it back. This waits until they do (up to 30 minutes for them "
-        "to arrive), keeping your page open, so don't close the browser or end your reply first. When it "
-        "returns, look at the page again before carrying on: they may have changed it."
+        "Last resort: let the person take over your browser. For one step only they can do, they watch "
+        "it live and hand it back. This waits for them, so keep the page open and don't end your reply. "
+        "Then check the page and finish the task yourself."
     ),
     "parameters": {
         "type": "object",
@@ -71,13 +69,13 @@ NO_SCREEN = "Your browser isn't on a screen the person can see right now. Tell t
 NOT_HERE = "The person can't take over your browser from this chat. Tell them in your reply what you need instead."
 
 
-# The few lines a chat that can show the screen starts with (Hermes adds its own heading).
+# The few lines a chat that can show the screen starts with (Hermes adds its own heading). Asking is
+# the last resort: the agent works for the person. Passwords and codes go through Hermes's vault, which
+# rides with the browser.
 WHEN_TO_ASK = (
-    "Your browser is on a screen the person can watch live and take over. When a page needs "
-    "something only they can do, like a CAPTCHA or \"are you human\" check, signing in, a one-time "
-    f"code or confirming a payment, call `{TOOL}` with what they need to do (through `tool_call` "
-    "if it isn't one of your tools) and wait for it to return. Don't try to get past the check "
-    "yourself, and don't stop to ask in your reply instead."
+    "You work for the person: a blocked page isn't a blocked task. Find another way, and use "
+    "`browser_vault` for passwords and codes. Only if the task truly depends on this page and needs "
+    f"them personally, like proving they're human, call `{TOOL}` (through `tool_call` if needed)."
 )
 
 

@@ -146,6 +146,7 @@ class WhenToAsk(unittest.TestCase):
         self.assertEqual(screen.when_to_ask({"platform": "desktop"}), screen.WHEN_TO_ASK)
         self.assertIn(screen.TOOL, screen.WHEN_TO_ASK)
         self.assertIn("tool_call", screen.WHEN_TO_ASK)
+        self.assertIn("browser_vault", screen.WHEN_TO_ASK)
 
     def test_nothing_where_nobody_could_take_over(self):
         screen._browser_on_screen = lambda: True
@@ -162,6 +163,7 @@ class WhenToAsk(unittest.TestCase):
         # Hermes's listing shows a tool's first sentence, up to 60 characters.
         first = screen.SCHEMA["description"].split(". ")[0] + "."
         self.assertLessEqual(len(first), 60)
+        self.assertTrue(first.startswith("Last resort"))
         self.assertIn("take over your browser", first)
 
 
