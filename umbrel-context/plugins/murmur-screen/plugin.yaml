@@ -1,6 +1,6 @@
 name: murmur-screen
 version: 1.0.0
-description: Lets an agent ask the person to take over its browser for a step only they can do (a CAPTCHA, signing in, a code), and wait until they hand it back.
+description: Lets an agent, as a last resort, ask the person to take over its browser for a step only they can do, and wait until they hand it back.
 author: Umbrel
 provides_tools:
   - ask_for_a_hand

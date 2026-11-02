@@ -3,9 +3,9 @@
 When the agent's browser runs on its Bot Screen, the person can watch it live and take it over
 (Hermes's display lease). One tool makes that a conversation instead of a dead end:
 
-  ask_for_a_hand   the agent asks the person to do a step only they can (a CAPTCHA, signing in,
-                   a one-time code, a payment), and waits, keeping the page open, until they take
-                   over and hand the browser back. Then it carries on by itself.
+  ask_for_a_hand   as a last resort, the agent asks the person to do a step only they can (like
+                   proving they're human), and waits, keeping the page open, until they take over
+                   and hand the browser back. Then it finishes the task by itself.
 
 Murmur draws the ask as a card with the live browser and a Take over button, from the tool call
 itself (its `reason`). The tool is offered to an agent whose browser runs on its screen, and only
@@ -14,7 +14,9 @@ routine nobody could take over, so it says so at once.
 
 Hermes lists plugin tools behind its tool search, and an agent seldom goes looking for a way to ask
 (Hermes keeps its own clarify tool out of search for that reason). So a chat that can show the
-screen also starts with a few lines saying when to ask: Hermes's supported prompt section.
+screen also starts with a few lines, Hermes's supported prompt section: the agent works for the
+person, so it finds another way first, with Hermes's browser_vault for passwords and codes, and asks
+only when the task truly needs them.
 
 It also opens the agent's browser the way the person watches it, maximized on the screen without
 Chrome for Testing's bar (its launcher, `chromium`), so that's the same on any Hermes, and keeps the
