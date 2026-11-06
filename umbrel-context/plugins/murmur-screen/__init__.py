@@ -382,7 +382,7 @@ def install_current_launcher() -> Optional[Callable[[], None]]:
             owners: dict[object, tuple[str, str]] = {}
 
             def build(executable, user_data_dir, *, headed, **kwargs):
-                argv = original(executable, user_data_dir, headed=headed, **kwargs)
+                argv = original(_not_the_launcher(executable), user_data_dir, headed=headed, **kwargs)
                 home = str(get_hermes_home().resolve())
                 with lock:
                     launcher = next((path for owner_home, path in owners.values() if owner_home == home), None)
@@ -405,6 +405,26 @@ def install_current_launcher() -> Optional[Callable[[], None]]:
                 browser_launcher.build_chromium_argv = original
 
     return restore
+
+
+def _hermes_chromium() -> Optional[str]:
+    """The Chromium Hermes installs for itself, whatever its config points at."""
+    try:
+        from hermes_cli.browser_runtime import chromium_executable
+
+        return chromium_executable(allow_override=False)
+    except Exception:
+        return None
+
+
+def _not_the_launcher(executable: str) -> str:
+    """Hermes's own Chromium in place of a murmur-screen launcher as the browser itself. An older plugin
+    set AGENT_BROWSER_EXECUTABLE_PATH to it in the process, and Hermes moves that setting into
+    browser.executable_path when it migrates the config (`hermes update` run from that process does),
+    where the launcher would be asked to run itself."""
+    if Path(executable).name == "chromium" and Path(executable).parent.name == "murmur-screen":
+        return _hermes_chromium() or executable
+    return executable
 
 
 def _full_browser() -> Optional[str]:

@@ -262,6 +262,17 @@ class CurrentBrowserLauncher(unittest.TestCase):
         restore()
         self.assertIs(self.launcher.build_chromium_argv, later)
 
+    def test_a_launcher_hermes_moved_into_the_config_runs_hermess_own_browser(self):
+        # An older murmur-screen set AGENT_BROWSER_EXECUTABLE_PATH to its launcher in the process, and
+        # a `hermes update` run from there carried it into browser.executable_path. Run as the browser,
+        # the launcher would run itself, and the agent's browser would never start, on or off the screen.
+        moved = '/opt/data/plugins/murmur-screen/chromium'
+        self.stack.enter_context(patch.object(screen, '_hermes_chromium', create=True, return_value='/hermes/chrome'))
+        screen.install_current_launcher()
+        argv = lambda headed: self.launcher.build_chromium_argv(moved, '/profile', headed=headed, packaged=True, sandbox_bypass=True)
+        self.assertEqual(argv(True), [screen.LAUNCHER, '--murmur-browser', '/hermes/chrome', '--user-data-dir=/profile', '--no-sandbox'])
+        self.assertEqual(argv(False)[0], '/hermes/chrome')
+
 
 class BrowserKeepalive(unittest.TestCase):
     def test_touches_only_the_waiting_tasks_new_browser_sessions(self):
