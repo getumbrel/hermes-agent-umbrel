@@ -60,6 +60,10 @@ RUN mkdir -p /app/umbrel-tui/dist
 COPY umbrel-chat-tui-entry.js /app/umbrel-tui/dist/entry.js
 COPY umbrel-context-cont-init.sh /etc/cont-init.d/50-umbrel-context
 COPY umbrel-gpu-cont-init.sh /etc/cont-init.d/40-umbrel-gpu
+# A browser stopped with its container leaves a lock on the agent's screen profile, and Hermes
+# then keeps that browser closed in every later container: clear a stale one at start.
+# Drop it once upstream fixes https://github.com/NousResearch/hermes-agent/issues/147739.
+COPY umbrel-browser-cont-init.sh /etc/cont-init.d/45-umbrel-browser
 # Skills are templates naming the Umbrel app ({{UMBREL_APP_NAME}}). Render the
 # default "Hermes Agent" copy now; cont-init re-renders it for UMBREL_APP_NAME.
 COPY umbrel-context/skills /app/umbrel-context-template/skills
@@ -94,7 +98,8 @@ RUN /opt/hermes/.venv/bin/python /app/patch-umbrel-local-memory.py && rm /app/pa
 # from the model, and that scrub ran over the exported files too ("hue": 120 lost its "12").
 # Drop it once upstream fixes https://github.com/NousResearch/hermes-agent/issues/149596.
 RUN /opt/hermes/.venv/bin/python /app/patch-umbrel-export-vault-values.py && rm /app/patch-umbrel-export-vault-values.py
-RUN chmod +x /app/bootstrap-umbrel-context.sh /app/umbrel-setup-wrapper.py /etc/cont-init.d/50-umbrel-context /etc/cont-init.d/40-umbrel-gpu
+RUN chmod +x /app/bootstrap-umbrel-context.sh /app/umbrel-setup-wrapper.py /etc/cont-init.d/50-umbrel-context /etc/cont-init.d/40-umbrel-gpu \
+    /etc/cont-init.d/45-umbrel-browser
 
 # Umbrel runs the upstream hermes user as UID/GID 1000. Bake that identity into
 # the image, but keep the upstream /opt/hermes install tree root-owned and

@@ -110,7 +110,7 @@ jobs:
 
             This updates the upstream image pin in both `Dockerfile` and `docker-compose.yml`.
 
-            Before merging, build the image: each `patch-umbrel-*.py` stops the build when the upstream code it patches has moved. Check every carried patch against this release and drop the ones upstream now fixes.
+            Before merging, build the image: each `patch-umbrel-*.py` stops the build when the upstream code it patches has moved. Then check every fix carried for an upstream bug against this release: the `Dockerfile` names each one's upstream issue ("Drop it once upstream fixes …"). Drop the ones upstream now fixes.
 
             After this PR is merged, a separate workflow tags the merge commit with `${{ steps.release.outputs.release_tag }}` to trigger the container build.
           labels: |
