@@ -273,6 +273,23 @@ class CurrentBrowserLauncher(unittest.TestCase):
         self.assertEqual(argv(True), [screen.LAUNCHER, '--murmur-browser', '/hermes/chrome', '--user-data-dir=/profile', '--no-sandbox'])
         self.assertEqual(argv(False)[0], '/hermes/chrome')
 
+    def test_the_screens_browser_icon_opens_through_the_launcher_too(self):
+        # The icon runs a command of its own, which the screen takes from Hermes as it starts, so a browser
+        # the person opens there comes up like the agent's: maximized, with no window buttons.
+        dock_argv = Mock(side_effect=lambda exe, directory, **kw: [exe, f'--user-data-dir={directory}', '--remote-debugging-port=0'])
+        icon = SimpleNamespace(dock_argv=dock_argv)
+        self.stack.enter_context(patch.dict(sys.modules, {'tools.bot_desktop': SimpleNamespace(browser=icon)}))
+        restore = screen.install_current_launcher()
+        self.assertEqual(
+            icon.dock_argv('/chosen/chrome', '/profile', sandbox_bypass=True),
+            [screen.LAUNCHER, '--murmur-browser', '/chosen/chrome', '--user-data-dir=/profile', '--remote-debugging-port=0'],
+        )
+        dock_argv.assert_called_once_with('/chosen/chrome', '/profile', sandbox_bypass=True)
+        self.home = Path('/agents/two')
+        self.assertEqual(icon.dock_argv('/chosen/chrome', '/profile')[0], '/chosen/chrome')
+        restore()
+        self.assertIs(icon.dock_argv, dock_argv)
+
 
 class BrowserKeepalive(unittest.TestCase):
     def test_touches_only_the_waiting_tasks_new_browser_sessions(self):

@@ -363,12 +363,18 @@ def install_current_launcher() -> Optional[Callable[[], None]]:
     keep Hermes's binary selection, sandbox flags and process tracking, and pass that selected binary
     to our shell launcher. No user config is written. A shared gateway can load one plugin instance
     per profile; only enabled profiles' screen launches are wrapped, and the last unload restores it.
+    The screen's Browser icon runs a command of its own (tools.bot_desktop.browser.dock_argv), which
+    the screen takes from Hermes as it starts, so that one goes through the launcher too.
     """
     try:
         from hermes_constants import get_hermes_home
         from tools import browser_launcher
     except ImportError:
         return None
+    try:
+        from tools.bot_desktop import browser as screen_browser
+    except ImportError:
+        screen_browser = None
     # Different profile managers can discover concurrently. Share the install/unload lock too,
     # so neither can replace the other's first wrapper and lose its registered profile.
     lock = browser_launcher.__dict__.setdefault("_murmur_screen_lock", threading.RLock())
@@ -381,28 +387,46 @@ def install_current_launcher() -> Optional[Callable[[], None]]:
         if state is None:
             owners: dict[object, tuple[str, str]] = {}
 
-            def build(executable, user_data_dir, *, headed, **kwargs):
-                argv = original(_not_the_launcher(executable), user_data_dir, headed=headed, **kwargs)
+            def here() -> Optional[str]:
                 home = str(get_hermes_home().resolve())
                 with lock:
-                    launcher = next((path for owner_home, path in owners.values() if owner_home == home), None)
+                    return next((path for owner_home, path in owners.values() if owner_home == home), None)
+
+            def build(executable, user_data_dir, *, headed, **kwargs):
+                argv = original(_not_the_launcher(executable), user_data_dir, headed=headed, **kwargs)
+                launcher = here()
                 if headed and launcher and _screen_running():
                     return [launcher, "--murmur-browser", argv[0], *argv[1:]]
                 return argv
 
-            state = (owners, original)
+            icon = getattr(screen_browser, "dock_argv", None)
+
+            def dock_argv(executable, user_data_dir, **kwargs):
+                # Built as the screen starts, so it can't wait for the screen to be running.
+                argv = icon(_not_the_launcher(executable), user_data_dir, **kwargs)
+                launcher = here()
+                return [launcher, "--murmur-browser", argv[0], *argv[1:]] if launcher else argv
+
+            def unwrap():
+                if browser_launcher.build_chromium_argv is build:
+                    browser_launcher.build_chromium_argv = original
+                if icon is not None and screen_browser.dock_argv is dock_argv:
+                    screen_browser.dock_argv = icon
+
+            state = (owners, unwrap)
             setattr(build, marker, state)
             browser_launcher.build_chromium_argv = build
-        wrapper = browser_launcher.build_chromium_argv
-        owners, original = state
+            if icon is not None:
+                screen_browser.dock_argv = dock_argv
+        owners, unwrap = state
         token = object()
         owners[token] = (str(get_hermes_home().resolve()), LAUNCHER)
 
     def restore():
         with lock:
             owners.pop(token, None)
-            if not owners and browser_launcher.build_chromium_argv is wrapper:
-                browser_launcher.build_chromium_argv = original
+            if not owners:
+                unwrap()
 
     return restore
 
