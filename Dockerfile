@@ -55,7 +55,7 @@ RUN apt-get update && \
 # Bundle Umbrel-managed context in the image. Hermes enables the runtime plugin
 # and external skill directory from config.yaml at startup; the files themselves
 # stay outside /opt/data so the agent cannot edit managed instructions.
-COPY bootstrap-umbrel-context.sh render-umbrel-context.py umbrel-setup-wrapper.py patch-umbrel-update-message.py patch-umbrel-proxy-auth.py patch-umbrel-local-memory.py /app/
+COPY bootstrap-umbrel-context.sh render-umbrel-context.py umbrel-setup-wrapper.py patch-umbrel-update-message.py patch-umbrel-proxy-auth.py patch-umbrel-local-memory.py patch-umbrel-export-vault-values.py /app/
 RUN mkdir -p /app/umbrel-tui/dist
 COPY umbrel-chat-tui-entry.js /app/umbrel-tui/dist/entry.js
 COPY umbrel-context-cont-init.sh /etc/cont-init.d/50-umbrel-context
@@ -90,6 +90,10 @@ RUN /opt/hermes/.venv/bin/python /app/patch-umbrel-proxy-auth.py && rm /app/patc
 # Size local model windows to the memory that's free (and inside the container's
 # limit), not the memory installed, so small Umbrels don't OOM on a 256K window.
 RUN /opt/hermes/.venv/bin/python /app/patch-umbrel-local-memory.py && rm /app/patch-umbrel-local-memory.py
+# Keep an agent's export as it is after its browser filled a saved card: the card's values are kept
+# from the model, and that scrub ran over the exported files too ("hue": 120 lost its "12").
+# Drop it once upstream fixes https://github.com/NousResearch/hermes-agent/issues/149596.
+RUN /opt/hermes/.venv/bin/python /app/patch-umbrel-export-vault-values.py && rm /app/patch-umbrel-export-vault-values.py
 RUN chmod +x /app/bootstrap-umbrel-context.sh /app/umbrel-setup-wrapper.py /etc/cont-init.d/50-umbrel-context /etc/cont-init.d/40-umbrel-gpu
 
 # Umbrel runs the upstream hermes user as UID/GID 1000. Bake that identity into
