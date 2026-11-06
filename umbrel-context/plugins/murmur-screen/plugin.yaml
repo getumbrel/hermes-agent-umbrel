@@ -1,5 +1,5 @@
 name: murmur-screen
-version: 1.0.0
+version: 1.0.1
 description: Lets an agent, as a last resort, ask the person to take over its browser for a step only they can do, and wait until they hand it back.
 author: Umbrel
 provides_tools:

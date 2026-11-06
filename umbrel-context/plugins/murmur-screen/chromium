@@ -1,8 +1,7 @@
 #!/bin/sh
 # The agent's browser, as murmur-screen opens it: the plugin points Hermes's
-# AGENT_BROWSER_EXECUTABLE_PATH here and the browser it pointed at before in
-# MURMUR_SCREEN_BROWSER, so every Hermes gets the same window, on Umbrel's
-# image or not.
+# argv builder here with --murmur-browser and its selected binary. Before
+# Hermes v0.23 it uses AGENT_BROWSER_EXECUTABLE_PATH and MURMUR_SCREEN_BROWSER.
 #
 # With a screen (DISPLAY is set) it opens there maximized, for the person to
 # watch and take over; the window follows the screen when a phone reshapes it.
@@ -23,6 +22,10 @@
 #
 # --test-type and --disable-infobars hide Chrome for Testing's "only for
 # automated testing" bar.
+if [ "${1:-}" = --murmur-browser ]; then
+  MURMUR_SCREEN_BROWSER=$2
+  shift 2
+fi
 if [ -n "${DISPLAY:-}" ]; then
   named() {
     wm=$(xprop -root _NET_SUPPORTING_WM_CHECK 2>/dev/null | sed -n 's/.*window id # //p')

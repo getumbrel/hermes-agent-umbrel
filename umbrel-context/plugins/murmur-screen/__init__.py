@@ -33,6 +33,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import threading
 import time
 from pathlib import Path
 from typing import Any, Callable, MutableMapping, Optional
@@ -139,9 +140,14 @@ def _browser_on_screen() -> bool:
         from hermes_cli.config import read_raw_config
         from tools.bot_desktop import runtime
 
-        headed = (read_raw_config().get("browser") or {}).get("headed")
-        on = str(headed).strip().lower() in ("true", "1", "yes") if headed is not None else False
-        on = on or os.environ.get("AGENT_BROWSER_HEADED", "").strip().lower() in ("true", "1", "yes")
+        try:
+            from tools.browser_session_cloud import is_headed_mode
+        except ImportError:
+            headed = (read_raw_config().get("browser") or {}).get("headed")
+            on = str(headed).strip().lower() in ("true", "1", "yes") if headed is not None else False
+            on = on or os.environ.get("AGENT_BROWSER_HEADED", "").strip().lower() in ("true", "1", "yes")
+        else:
+            on = is_headed_mode()
         return on and runtime.is_supported_host() and not runtime.missing_binaries()
     except Exception:
         log.debug("murmur-screen: couldn't tell whether the browser is on the screen", exc_info=True)
@@ -201,14 +207,18 @@ def _keeper(task_id: Optional[str]) -> Callable[[], None]:
         except Exception:
             pass
         try:
-            from tools import browser_tool as bt
-            from tools.browser_tool_lifecycle import _update_session_activity
+            try:
+                from tools import browser_session as bt
+                from tools.browser_session_lifecycle import update_session_activity
+            except ImportError:  # Hermes before v0.23, including separately installed plugins
+                from tools import browser_tool as bt
+                from tools.browser_tool_lifecycle import _update_session_activity as update_session_activity
 
             # The task's own sessions: plain, a served profile's (task@tag) and the local sidecar (::local).
             with bt._cleanup_lock:
                 keys = [k for k in bt._session_last_activity if task_id and (k == task_id or k.startswith((f"{task_id}@", f"{task_id}::")))]
             for key in keys:
-                _update_session_activity(key)
+                update_session_activity(key)
         except Exception:
             pass
         try:
@@ -277,10 +287,21 @@ def _devtools(path: str) -> Optional[str]:
 
     from tools.bot_desktop import browser
 
-    port = browser.running_instance_cdp_port(str(browser.profile_dir()))
-    if not port:
-        return None
-    with urlopen(f"http://127.0.0.1:{port}/json/{path}", timeout=1) as response:
+    profile = str(browser.profile_dir())
+    legacy_port = getattr(browser, "running_instance_cdp_port", None)
+    if legacy_port is not None:
+        port = legacy_port(profile)
+        if not port:
+            return None
+        endpoint = f"http://127.0.0.1:{port}"
+    else:
+        from tools.browser_launcher import get_browser
+
+        launched = get_browser(f"profile:{profile}")
+        if launched is None:
+            return None
+        endpoint = launched.http_url.rstrip("/")
+    with urlopen(f"{endpoint}/json/{path}", timeout=1) as response:
         return response.read().decode("utf-8", "replace")
 
 
@@ -325,8 +346,8 @@ def _uncached(check: Callable[[], bool]) -> Callable[[], bool]:
 
 
 # ── How the browser opens ───────────────────────────────────────────────────────────────────────
-# Hermes starts the agent's browser from AGENT_BROWSER_EXECUTABLE_PATH, its setting for running your
-# own. The plugin points that at its launcher, which runs the browser it pointed at before: maximized
+# Before v0.23, Hermes starts the agent's browser from AGENT_BROWSER_EXECUTABLE_PATH. The legacy
+# integration points that at our launcher, which runs the browser it pointed at before: maximized
 # on the screen, headless as always off it. Only once there's a browser to run, since pointing the
 # setting anywhere earlier stops Hermes installing one, so it tries again as each chat starts (a
 # Hermes that installs Chromium on first use gets it from the next chat). Switched off, it's put back.
@@ -335,6 +356,55 @@ LAUNCHER = str(Path(__file__).resolve().with_name("chromium"))
 BROWSER_PATH = "AGENT_BROWSER_EXECUTABLE_PATH"
 RUNS = "MURMUR_SCREEN_BROWSER"  # what the launcher runs
 _before: dict[str, Optional[str]] = {}
+
+
+def install_current_launcher() -> Optional[Callable[[], None]]:
+    """v0.23 removed AGENT_BROWSER_EXECUTABLE_PATH. Wrap its argv builder in memory instead:
+    keep Hermes's binary selection, sandbox flags and process tracking, and pass that selected binary
+    to our shell launcher. No user config is written. A shared gateway can load one plugin instance
+    per profile; only enabled profiles' screen launches are wrapped, and the last unload restores it.
+    """
+    try:
+        from hermes_constants import get_hermes_home
+        from tools import browser_launcher
+    except ImportError:
+        return None
+    # Different profile managers can discover concurrently. Share the install/unload lock too,
+    # so neither can replace the other's first wrapper and lose its registered profile.
+    lock = browser_launcher.__dict__.setdefault("_murmur_screen_lock", threading.RLock())
+    with lock:
+        original = getattr(browser_launcher, "build_chromium_argv", None)
+        if original is None or not os.access(LAUNCHER, os.X_OK):
+            return None
+        marker = "_murmur_screen_launchers"
+        state = getattr(original, marker, None)
+        if state is None:
+            owners: dict[object, tuple[str, str]] = {}
+
+            def build(executable, user_data_dir, *, headed, **kwargs):
+                argv = original(executable, user_data_dir, headed=headed, **kwargs)
+                home = str(get_hermes_home().resolve())
+                with lock:
+                    launcher = next((path for owner_home, path in owners.values() if owner_home == home), None)
+                if headed and launcher and _screen_running():
+                    return [launcher, "--murmur-browser", argv[0], *argv[1:]]
+                return argv
+
+            state = (owners, original)
+            setattr(build, marker, state)
+            browser_launcher.build_chromium_argv = build
+        wrapper = browser_launcher.build_chromium_argv
+        owners, original = state
+        token = object()
+        owners[token] = (str(get_hermes_home().resolve()), LAUNCHER)
+
+    def restore():
+        with lock:
+            owners.pop(token, None)
+            if not owners and browser_launcher.build_chromium_argv is wrapper:
+                browser_launcher.build_chromium_argv = original
+
+    return restore
 
 
 def _full_browser() -> Optional[str]:
@@ -371,8 +441,12 @@ def put_back(environ: MutableMapping[str, str] = os.environ) -> None:
 def register(ctx) -> None:
     ctx.register_tool(name=TOOL, toolset=TOOLSET, schema=SCHEMA, handler=ask_for_a_hand, check_fn=_uncached(_browser_on_screen), emoji="🙋")
     ctx.register_system_prompt_section("murmur-screen", when_to_ask)
-    open_through_launcher()
-    ctx.register_hook("on_session_start", lambda **_: open_through_launcher())
+    restore = install_current_launcher()
+    if restore is not None:
+        ctx.on_unload(restore)
+    else:
+        open_through_launcher()
+        ctx.register_hook("on_session_start", lambda **_: open_through_launcher())
     ctx.register_hook("post_tool_call", after_a_step)
     ctx.register_middleware("llm_request", unbind)
     ctx.on_unload(put_back)

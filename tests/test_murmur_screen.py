@@ -12,12 +12,16 @@ suite (test/contract/screen.contract.ts in getumbrel/murmur).
 from __future__ import annotations
 
 import importlib.util
+from contextlib import ExitStack
 import json
 import os
 import subprocess
 import sys
 import tempfile
+import threading
+from types import SimpleNamespace
 import unittest
+from unittest.mock import Mock, patch
 from pathlib import Path
 
 PLUGIN = Path(__file__).resolve().parent.parent / "umbrel-context" / "plugins" / "murmur-screen"
@@ -205,10 +209,79 @@ class TheBrowsersWindow(unittest.TestCase):
         self.assertTrue(os.access(screen.LAUNCHER, os.X_OK))
 
 
+class CurrentBrowserLauncher(unittest.TestCase):
+    def setUp(self):
+        self.home = Path('/agents/one')
+        self.original = Mock(spec=lambda exe, directory, **kw: None, side_effect=lambda exe, directory, **kw: [exe, f'--user-data-dir={directory}', '--no-sandbox'])
+        self.launcher = SimpleNamespace(build_chromium_argv=self.original)
+        self.stack = ExitStack()
+        self.addCleanup(self.stack.close)
+        self.stack.enter_context(patch.dict(sys.modules, {
+            'hermes_constants': SimpleNamespace(get_hermes_home=lambda: self.home),
+            'tools': SimpleNamespace(browser_launcher=self.launcher),
+        }))
+        self.stack.enter_context(patch.object(screen, '_screen_running', return_value=True))
+
+    def argv(self, headed=True):
+        return self.launcher.build_chromium_argv('/chosen/chrome', '/profile', headed=headed, packaged=True, sandbox_bypass=True)
+
+    def test_wraps_the_selected_browser_and_preserves_upstream_launch_flags(self):
+        restore = screen.install_current_launcher()
+        self.assertEqual(self.argv(), [screen.LAUNCHER, '--murmur-browser', '/chosen/chrome', '--user-data-dir=/profile', '--no-sandbox'])
+        self.original.assert_called_once_with('/chosen/chrome', '/profile', headed=True, packaged=True, sandbox_bypass=True)
+        restore()
+        self.assertIs(self.launcher.build_chromium_argv, self.original)
+
+    def test_only_the_enabled_profiles_screen_is_wrapped(self):
+        screen.install_current_launcher()
+        self.home = Path('/agents/two')
+        self.assertEqual(self.argv()[0], '/chosen/chrome')
+        self.home = Path('/agents/one')
+        self.assertEqual(self.argv(headed=False)[0], '/chosen/chrome')
+        with patch.object(screen, '_screen_running', return_value=False):
+            self.assertEqual(self.argv()[0], '/chosen/chrome')
+
+    def test_profiles_unload_independently_and_last_unload_restores_the_builder(self):
+        first = screen.install_current_launcher()
+        wrapper = self.launcher.build_chromium_argv
+        self.home = Path('/agents/two')
+        second = screen.install_current_launcher()
+        self.assertIs(self.launcher.build_chromium_argv, wrapper)
+        first()
+        self.assertEqual(self.argv()[0], screen.LAUNCHER)
+        self.home = Path('/agents/one')
+        self.assertEqual(self.argv()[0], '/chosen/chrome')
+        second()
+        second()
+        self.assertIs(self.launcher.build_chromium_argv, self.original)
+
+    def test_unload_does_not_replace_a_later_plugins_builder(self):
+        restore = screen.install_current_launcher()
+        later = Mock()
+        self.launcher.build_chromium_argv = later
+        restore()
+        self.assertIs(self.launcher.build_chromium_argv, later)
+
+
+class BrowserKeepalive(unittest.TestCase):
+    def test_touches_only_the_waiting_tasks_new_browser_sessions(self):
+        touched = []
+        sessions = SimpleNamespace(_cleanup_lock=threading.RLock(), _session_last_activity={
+            'task': 0, 'task@profile': 0, 'task@profile::local': 0, 'task::local': 0, 'task-other': 0,
+        })
+        lifecycle = SimpleNamespace(update_session_activity=touched.append)
+        with patch.dict(sys.modules, {
+            'tools': SimpleNamespace(browser_session=sessions),
+            'tools.browser_session_lifecycle': lifecycle,
+        }):
+            screen._keeper('task')()
+        self.assertEqual(touched, ['task', 'task@profile', 'task@profile::local', 'task::local'])
+
+
 class TheLauncher(unittest.TestCase):
     """The launcher itself, running a stand-in browser that says how it was started."""
 
-    def run_it(self, *args, display=None, config=None):
+    def run_it(self, *args, display=None, config=None, explicit=False):
         """How the stand-in browser was started, whether the old tabs are left, and what the desktop was told."""
         with tempfile.TemporaryDirectory() as tmp:
             browser = Path(tmp, "chrome")
@@ -231,6 +304,9 @@ class TheLauncher(unittest.TestCase):
             profile = Path(tmp, "profile")
             (profile / "Default" / "Sessions").mkdir(parents=True)
             args = [a.replace("PROFILE", str(profile)) for a in args]
+            if explicit:
+                env.pop("MURMUR_SCREEN_BROWSER")
+                args = ["--murmur-browser", str(browser), *args]
             out = subprocess.run([screen.LAUNCHER, *args], env=env, capture_output=True, text=True, check=True).stdout.split("\n")[:-1]
             return out, (profile / "Default" / "Sessions").exists(), told.read_text() if told.exists() else ""
 
@@ -244,6 +320,12 @@ class TheLauncher(unittest.TestCase):
         out, sessions_left, _ = self.run_it("--user-data-dir=PROFILE", display=":20")
         self.assertEqual(out[:4], ["--test-type", "--disable-infobars", "--start-maximized", "--hide-crash-restore-bubble"])
         self.assertFalse(sessions_left)
+
+    def test_current_hermes_passes_its_binary_without_an_environment_override(self):
+        out, _, _ = self.run_it('--user-data-dir=PROFILE', '--no-sandbox', display=':20', explicit=True)
+        self.assertEqual(out[:4], ['--test-type', '--disable-infobars', '--start-maximized', '--hide-crash-restore-bubble'])
+        self.assertEqual(out[-1], '--no-sandbox')
+        self.assertNotIn('--murmur-browser', out)
 
     def test_no_window_buttons_on_the_agents_screen(self):
         _, _, told = self.run_it(display=":20", config="/opt/data/bot-desktop/xdg")
@@ -283,6 +365,23 @@ class TheAgentsTab(unittest.TestCase):
         self.assertFalse(screen.to_the_front(get))
         self.assertEqual(asked, ["list"])
         self.assertFalse(screen.to_the_front(lambda path: None))
+
+    def test_current_hermes_looks_up_the_current_profiles_tracked_browser(self):
+        browser = SimpleNamespace(profile_dir=lambda: Path('/agents/one/bot-desktop/browser-profile'))
+        lookup = Mock(return_value=SimpleNamespace(http_url='http://127.0.0.1:9876'))
+        response = Mock()
+        response.read.return_value = b'[]'
+        with patch.dict(sys.modules, {
+            'tools.bot_desktop': SimpleNamespace(browser=browser),
+            'tools.browser_launcher': SimpleNamespace(get_browser=lookup),
+        }), patch('urllib.request.urlopen') as request:
+            request.return_value.__enter__.return_value = response
+            self.assertEqual(screen._devtools('list'), '[]')
+            lookup.assert_called_once_with('profile:/agents/one/bot-desktop/browser-profile')
+            request.assert_called_once_with('http://127.0.0.1:9876/json/list', timeout=1)
+            lookup.return_value = None
+            self.assertIsNone(screen._devtools('list'))
+            self.assertEqual(request.call_count, 1)
 
     def test_after_each_step_in_its_browser_while_the_agent_has_it(self):
         saved = (screen._screen_running, screen._human_holds, screen.to_the_front)
