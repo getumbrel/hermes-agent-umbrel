@@ -12,8 +12,8 @@ Two changes:
 
 1. agent/redact.py: redact_sensitive_text takes `vault_values` (default True, so every model-bound
    caller keeps the scrub) and skips the registered vault values when it's False.
-2. hermes_cli/profiles.py: _scrub_export_secrets passes vault_values=False. Secret-shaped strings
-   (keys, tokens) are still scrubbed from the export.
+2. hermes_cli/profiles_export_scrub.py: scrub_export_secrets passes vault_values=False.
+   Secret-shaped strings (keys, tokens) and stored secret envelopes are still scrubbed from the export.
 
 Carried until upstream Hermes ships its own fix; then drop this file and its COPY and RUN lines in
 the Dockerfile. Upstream issue: https://github.com/NousResearch/hermes-agent/issues/149596
@@ -27,7 +27,9 @@ import os
 
 
 REDACT_PATH = Path(os.environ.get("HERMES_REDACT_PATH", "/opt/hermes/agent/redact.py"))
-PROFILES_PATH = Path(os.environ.get("HERMES_PROFILES_PATH", "/opt/hermes/hermes_cli/profiles.py"))
+EXPORT_SCRUB_PATH = Path(os.environ.get(
+    "HERMES_EXPORT_SCRUB_PATH", "/opt/hermes/hermes_cli/profiles_export_scrub.py"
+))
 
 # 1. The keyword, and the scrub it skips.
 SIGNATURE = "                          redact_url_credentials: bool = False) -> str:\n"
@@ -46,10 +48,10 @@ VAULT_SCRUB_UNLESS = """    if vault_values:
 """
 
 # 2. The export asks for it.
-EXPORT_SCRUB = "        redacted = redact_sensitive_text(text, force=True)\n"
+EXPORT_SCRUB = "        redacted = redact_sensitive_text(_mask_secret_envelopes(text), force=True)\n"
 EXPORT_SCRUB_KEEPS = """        # Not the vault values a browser fill registered: they guard model egress, and a card's
         # expiry month or holder's name would rewrite unrelated text across the whole profile.
-        redacted = redact_sensitive_text(text, force=True, vault_values=False)
+        redacted = redact_sensitive_text(_mask_secret_envelopes(text), force=True, vault_values=False)
 """
 
 
@@ -68,9 +70,9 @@ def main() -> None:
     text = replace_once(text, VAULT_SCRUB, VAULT_SCRUB_UNLESS, "vault value scrub")
     REDACT_PATH.write_text(text, encoding="utf-8")
 
-    text = PROFILES_PATH.read_text(encoding="utf-8")
+    text = EXPORT_SCRUB_PATH.read_text(encoding="utf-8")
     text = replace_once(text, EXPORT_SCRUB, EXPORT_SCRUB_KEEPS, "profile export scrub")
-    PROFILES_PATH.write_text(text, encoding="utf-8")
+    EXPORT_SCRUB_PATH.write_text(text, encoding="utf-8")
 
 
 if __name__ == "__main__":
