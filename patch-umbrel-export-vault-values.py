@@ -32,8 +32,8 @@ EXPORT_SCRUB_PATH = Path(os.environ.get(
 ))
 
 # 1. The keyword, and the scrub it skips.
-SIGNATURE = "                          redact_url_credentials: bool = False) -> str:\n"
-SIGNATURE_KEYWORD = "                          redact_url_credentials: bool = False, vault_values: bool = True) -> str:\n"
+SIGNATURE = "def redact_sensitive_text(text: str, *, force: bool = False,"
+SIGNATURE_KEYWORD = SIGNATURE + " vault_values: bool = True,"
 DOCSTRING_END = '    fixtures are untouched.\n    """\n'
 DOCSTRING_END_NOTED = '''    fixtures are untouched.
 
@@ -42,9 +42,10 @@ DOCSTRING_END_NOTED = '''    fixtures are untouched.
     expiry month, its holder's name), so a pass over a profile's own files must not apply them.
     """
 '''
-VAULT_SCRUB = "    text = redact_registered_vault_values(text)\n"
+VAULT_SCRUB = "    text = redact_secret_source_values(redact_registered_vault_values(text))\n"
 VAULT_SCRUB_UNLESS = """    if vault_values:
         text = redact_registered_vault_values(text)
+    text = redact_secret_source_values(text)
 """
 
 # 2. The export asks for it.

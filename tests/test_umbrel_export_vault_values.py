@@ -9,11 +9,12 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import patch
 
 if importlib.util.find_spec("hermes_cli") is not None:
     from agent import redact
+    from agent.redact_secret_sources import publish_secret_source_values
     from hermes_cli.profiles import _scrub_export_secrets
+    from hermes_constants import reset_hermes_home_override, set_hermes_home_override
 else:
     redact = None
 
@@ -24,9 +25,7 @@ class ExportAfterVaultFill(unittest.TestCase):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         self.root = Path(tmp.name)
-        scope = patch.object(redact, "_vault_scope", return_value=str(self.root))
-        scope.start()
-        self.addCleanup(scope.stop)
+        self.addCleanup(reset_hermes_home_override, set_hermes_home_override(self.root))
         self.addCleanup(redact.clear_vault_redaction_values)
         for value in ("12", "2030", "Ada"):
             redact.register_vault_redaction_value(value)
@@ -69,6 +68,16 @@ class ExportAfterVaultFill(unittest.TestCase):
         self.assertEqual(source.read_text(), original)
         self.assertFalse(link.is_symlink())
         self.assertEqual(json.loads(link.read_text())["saved"]["value"], "***")
+
+    def test_external_secret_source_values_stay_masked_in_exports_and_model_output(self):
+        fixture = "mock-opaque-credential"
+        publish_secret_source_values(self.root, {"APP_PASSWORD": fixture})
+        self.addCleanup(publish_secret_source_values, self.root, {})
+        path = self.root / "notes.txt"
+        path.write_text(f"Ada used {fixture}")
+        _scrub_export_secrets(self.root)
+        self.assertEqual(path.read_text(), "Ada used «redacted:secret-source»")
+        self.assertNotIn(fixture, redact.redact_sensitive_text(fixture, force=True))
 
 
 if __name__ == "__main__":
