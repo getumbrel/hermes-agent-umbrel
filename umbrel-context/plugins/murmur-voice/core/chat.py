@@ -21,6 +21,7 @@ def keep(session_key: str, you: str, voice: str) -> list[int]:
     import tui_gateway.server as gateway
     from agent.context_compressor import _DB_PERSISTED_MARKER
     from agent.message_metadata import stamp_message_uid
+    from persistence.conversation.messages import NewMessage
 
     session = gateway._session_for_key(session_key)
     if session is None:
@@ -33,13 +34,14 @@ def keep(session_key: str, you: str, voice: str) -> list[int]:
     agent = session.get("agent")
     db = getattr(agent, "_session_db", None) if agent is not None else None
     entries = [{"role": "user", "content": you}, {"role": "assistant", "content": voice}]
-    with contextlib.nullcontext(db) if db is not None else gateway._session_db(session) as store:
-        if store is None:
+    with (contextlib.nullcontext(db) if db is not None else gateway._session_db(session)) as store, \
+            gateway._persistence_for(store) as persistence:
+        if persistence is None:
             raise RuntimeError("Hermes has nowhere to save this chat")
         target = gateway._submit_row_target_key(session)
         for entry in entries:
-            entry["_row_id"] = store.append_message(session_id=target, role=entry["role"], content=entry["content"],
-                                                    message_uid=stamp_message_uid(entry))
+            entry["_row_id"] = persistence.messages.append(target, NewMessage(
+                role=entry["role"], content=entry["content"], message_uid=stamp_message_uid(entry)))
             entry[_DB_PERSISTED_MARKER] = True
     with session["history_lock"]:
         session.setdefault("history", []).extend(entries)

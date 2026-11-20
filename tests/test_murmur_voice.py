@@ -774,10 +774,13 @@ class Spoken(unittest.TestCase):
 
         rows = self.rows = []
 
-        class Store:
-            def append_message(self, session_id, role, content, message_uid):
-                rows.append((session_id, role, content, message_uid))
+        class Messages:
+            def append(self, session_id, message):
+                rows.append((session_id, message.role, message.content, message.message_uid))
                 return len(rows)
+
+        class Store:  # Hermes's persistence handle (0.23.3 on): its rows are under .messages
+            messages = Messages()
 
         self.session = {"session_key": "chat-1", "history": [], "history_version": 3, "history_lock": threading.Lock(), "running": False}
         self.ensured = []
@@ -785,12 +788,16 @@ class Spoken(unittest.TestCase):
         gateway._session_for_key = lambda key: self.session if key == "chat-1" else None
         gateway._ensure_session_db_row = lambda s: self.ensured.append(s["session_key"]) or True
         gateway._session_db = lambda s: contextlib.nullcontext(Store())
+        gateway._persistence_for = lambda db: contextlib.nullcontext(db)  # a handle is its own persistence
         gateway._submit_row_target_key = lambda s: "row-key"
-        package, compressor, metadata = (types.ModuleType(n) for n in ("tui_gateway", "agent.context_compressor", "agent.message_metadata"))
+        package, compressor, metadata, messages = (types.ModuleType(n) for n in (
+            "tui_gateway", "agent.context_compressor", "agent.message_metadata", "persistence.conversation.messages"))
         compressor._DB_PERSISTED_MARKER = "_db_persisted"
         metadata.stamp_message_uid = lambda m: m.setdefault("uid", f"u{id(m)}")
+        messages.NewMessage = types.SimpleNamespace
         package.server = gateway
-        self.modules = {"tui_gateway": package, "tui_gateway.server": gateway, "agent.context_compressor": compressor, "agent.message_metadata": metadata}
+        self.modules = {"tui_gateway": package, "tui_gateway.server": gateway, "agent.context_compressor": compressor,
+                        "agent.message_metadata": metadata, "persistence.conversation.messages": messages}
         self.saved = {k: sys.modules.get(k) for k in self.modules}
         sys.modules.update(self.modules)
 
@@ -814,16 +821,13 @@ class Spoken(unittest.TestCase):
 
         rows = self.rows
 
-        class Store:
-            def append_message(self, session_id, role, content, message_uid):
-                self.assert_row()
-                rows.append(role)
+        class Messages:
+            def append(inner, session_id, message):
+                self.assertEqual(self.ensured, ["chat-1"])
+                rows.append(message.role)
                 return len(rows)
 
-            def assert_row(inner):
-                self.assertEqual(self.ensured, ["chat-1"])
-
-        self.session["agent"] = types.SimpleNamespace(_session_db=Store())
+        self.session["agent"] = types.SimpleNamespace(_session_db=types.SimpleNamespace(messages=Messages()))
         self.assertEqual(chat.keep("chat-1", "Hey.", "Hi."), [1, 2])
 
     def test_waits_for_a_running_turn(self):
